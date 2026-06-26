@@ -1,0 +1,8 @@
+torch
+pettingzoo
+ray[rllib]
+numpy
+gymnasium
+pyyaml
+matplotlib
+pytest

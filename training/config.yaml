@@ -1,0 +1,5 @@
+# All hyperparameters go here
+num_agents: 4
+learning_rate: 0.0003
+gamma: 0.99
+episodes: 1000
