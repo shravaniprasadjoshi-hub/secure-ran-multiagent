@@ -1,5 +1,37 @@
-# All hyperparameters go here
-num_agents: 4
-learning_rate: 0.0003
-gamma: 0.99
-episodes: 1000
+# config.yaml - all hyperparameters for training
+# Owner: Shreya
+# DONT TOUCH: changing values here affects all modules
+
+env:
+  num_cells: 7
+  num_ues: 10
+  obs_dim: 16 # num_cells*2 + 1 (velocity) + 1 (interference)
+  action_dim: 3 # STAY, PREPARE_HO, TRIGGER_HO
+  max_steps: 200
+
+training:
+  max_episodes: 1000
+  max_steps_per_episode: 200
+  update_interval: 200 # PPO update every N global steps
+  save_every: 100 # checkpoint every N episodes
+  seed: 42
+  checkpoint_dir: results/checkpoints/
+  log_dir: results/logs/
+
+agent:
+  lr_actor: 0.0003
+  lr_critic: 0.001
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_eps: 0.2
+  entropy_coef: 0.01
+  max_grad_norm: 0.5
+  update_epochs: 4
+  minibatch_size: 64
+
+security:
+  anomaly_window: 20
+  zscore_threshold: 2.5
+  ho_rate_upper: 0.85
+  ho_rate_lower: 0.02
+  consensus_deviation_thresh: 0.6
