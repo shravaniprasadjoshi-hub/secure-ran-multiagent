@@ -6,60 +6,71 @@ TODO: Implement channel/signal quality calculations.
 
 import numpy as np
 
-# UE parameters
-DEFAULT_SPEED_MS = 3.0   # m/s ~ pedestrian
-MAX_SPEED_MS = 30.0      # m/s ~ vehicular
-AREA_RADIUS = 800.0      # meters - UEs spawn within this radius of origin
+# Channel constants
+NOISE_FLOOR_DBM = -104.0      # thermal noise for 100 MHz BW
+SHADOWING_STD_DB = 4.0        # log-normal shadowing std deviation
+MIN_DISTANCE_M = 1.0          # avoid log(0)
 
 
-class UE:
+def path_loss_3gpp_uma_los(distance_m, freq_ghz):
     """
-    Represents a User Equipment (phone / IoT device).
-    Uses a simple random-direction mobility model with occasional turns.
+    3GPP TR 38.901 Urban Macro Line-of-Sight path loss model (simplified).
+    Returns path loss in dB.
+    
+    Formula: PL = 28.0 + 22*log10(d) + 20*log10(f_GHz)
     """
+    d = max(distance_m, MIN_DISTANCE_M)
+    return 28.0 + 22.0 * np.log10(d) + 20.0 * np.log10(freq_ghz)
 
-    def __init__(self, ue_id, num_cells, speed=None):
-        self.ue_id = ue_id
-        self.num_cells = num_cells
 
-        # spawn at random location inside coverage area
-        angle = np.random.uniform(0, 2 * np.pi)
-        radius = np.random.uniform(0, AREA_RADIUS)
-        self.position = np.array([
-            radius * np.cos(angle),
-            radius * np.sin(angle),
-        ])
+def compute_rsrp(ue, cell, add_shadowing=True):
+    """
+    Reference Signal Received Power (dBm) from `cell` to `ue`.
+    
+    RSRP = Tx_power - PathLoss - Shadowing
+    """
+    distance = np.linalg.norm(ue.position - cell.position)
+    pl = path_loss_3gpp_uma_los(distance, cell.freq)
 
-        # mobility
-        self.velocity = speed if speed is not None else \
-                        np.random.uniform(1.0, DEFAULT_SPEED_MS)
-        self.direction = np.random.uniform(0, 2 * np.pi)
+    shadowing = np.random.normal(0, SHADOWING_STD_DB) if add_shadowing else 0.0
+    rsrp = cell.tx_power - pl - shadowing
+    return float(rsrp)
 
-        # network state (populated by env)
-        self.serving_cell = np.random.randint(0, num_cells)
-        self.rsrp = np.zeros(num_cells)   # dBm per cell
-        self.interference = 0.0           # mW
 
-    def move(self, dt=1.0):
-        """
-        Move UE forward; small chance to change direction.
-        dt = timestep in seconds (default 1s).
-        """
-        # 10% chance to turn each step
-        if np.random.rand() < 0.1:
-            self.direction += np.random.uniform(-np.pi / 4, np.pi / 4)
+def compute_interference(ue, all_cells):
+    """
+    Total interference (in mW) at UE from all non-serving cells.
+    Sums power from all cells except the serving one.
+    """
+    interference_mw = 0.0
+    for cell in all_cells:
+        if cell.cell_id == ue.serving_cell:
+            continue
+        rsrp_dbm = compute_rsrp(ue, cell, add_shadowing=False)
+        interference_mw += 10 ** (rsrp_dbm / 10.0)
+    return float(interference_mw)
 
-        dx = self.velocity * dt * np.cos(self.direction)
-        dy = self.velocity * dt * np.sin(self.direction)
-        self.position += np.array([dx, dy])
 
-        # bounce off boundary
-        dist_from_origin = np.linalg.norm(self.position)
-        if dist_from_origin > AREA_RADIUS:
-            # reflect direction back toward center
-            self.direction += np.pi
-            self.position = self.position * (AREA_RADIUS / dist_from_origin)
+def compute_sinr(ue, all_cells):
+    """
+    Signal to Interference + Noise Ratio in dB at UE.
+    
+    SINR = Signal / (Interference + Noise)
+    """
+    serving_cell = all_cells[ue.serving_cell]
+    signal_dbm = compute_rsrp(ue, serving_cell, add_shadowing=False)
+    signal_mw = 10 ** (signal_dbm / 10.0)
 
-    def __repr__(self):
-        return (f"UE({self.ue_id}, pos={self.position.round(1)}, "
-                f"v={self.velocity:.1f} m/s, cell={self.serving_cell})")
+    interference_mw = compute_interference(ue, all_cells)
+    noise_mw = 10 ** (NOISE_FLOOR_DBM / 10.0)
+
+    sinr_linear = signal_mw / (interference_mw + noise_mw)
+    return float(10.0 * np.log10(sinr_linear))
+
+
+def compute_throughput_mbps(sinr_db, bandwidth_mhz=100):
+    """
+    Shannon capacity estimate: C = BW * log2(1 + SINR_linear)
+    """
+    sinr_linear = 10 ** (sinr_db / 10.0)
+    return bandwidth_mhz * np.log2(1 + sinr_linear)
