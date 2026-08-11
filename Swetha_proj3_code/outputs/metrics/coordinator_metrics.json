@@ -1,0 +1,9 @@
+{
+  "samples": 2000,
+  "consensus_accept_rate": 0.058,
+  "action_distribution": {
+    "none": 1806,
+    "handover_trigger": 161,
+    "security_mitigation": 33
+  }
+}

@@ -1,0 +1,72 @@
+project:
+  name: "Secure Multi-Agent AI Framework for RAN Control Loops"
+  version: "1.0.0"
+  seed: 42
+
+paths:
+  data_dir: "data"
+  telemetry_csv: "data/ran_multi_agent_telemetry_70k.csv"
+  rag_corpus: "data/rag_corpus.jsonl"
+  outputs_dir: "outputs"
+  models_dir: "outputs/models"
+  plots_dir: "outputs/plots"
+  metrics_dir: "outputs/metrics"
+  reports_dir: "outputs/reports"
+  twin_dir: "outputs/digital_twin"
+
+data_split:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+consensus:
+  majority_threshold: 0.70
+  trust_threshold: 0.80
+  confidence_threshold: 0.85
+
+agents:
+  mobility_agent:
+    model: "gradient_boosting"
+    task: "classification"
+    target: "ho_required"
+    features: [rsrp_dbm, rsrq_db, sinr_db, cqi, neighbor_rsrp_dbm, ue_speed_kmh, ho_history_count, prb_utilization_pct]
+  security_agent:
+    model: "random_forest"
+    task: "classification"
+    target: "threat_label"
+    features: [trust_score, attack_probability, anomaly_score, sinr_db, interference_dbm, packet_loss_pct, agent_confidence]
+  resource_agent:
+    model: "gradient_boosting"
+    task: "regression"
+    target: "allocated_prb_count"
+    features: [prb_utilization_pct, cell_load_pct, cqi, dl_throughput_mbps, sinr_db, spectral_efficiency_bps_hz]
+  energy_agent:
+    model: "random_forest"
+    task: "classification"
+    target: "energy_label"
+    features: [cell_load_pct, prb_utilization_pct, dl_throughput_mbps, latency_ms, spectral_efficiency_bps_hz]
+  trust_agent:
+    model: "mlp"
+    task: "regression"
+    target: "trust_score"
+    features: [anomaly_score, attack_probability, agent_confidence, consensus_vote_pct, policy_compliance_score]
+  beamforming_agent:
+    model: "gradient_boosting"
+    task: "regression"
+    target: "beam_index"
+    features: [rsrp_dbm, sinr_db, cqi, rssi_dbm, interference_dbm, ue_direction_deg]
+  qos_agent:
+    model: "random_forest"
+    task: "classification"
+    target: "ho_success"
+    features: [latency_ms, packet_loss_pct, dl_throughput_mbps, ul_throughput_mbps, cell_load_pct, sinr_db]
+  policy_agent:
+    model: "gradient_boosting"
+    task: "classification"
+    target: "rrc_action"
+    features: [policy_compliance_score, trust_score, consensus_vote_pct, ho_required, anomaly_score, agent_confidence]
+
+digital_twin:
+  num_cells: 48
+  num_gnbs: 12
+  simulation_steps: 200

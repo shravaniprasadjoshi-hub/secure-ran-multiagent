@@ -1,0 +1,13 @@
+{
+  "agents": [
+    "mobility_agent",
+    "security_agent",
+    "resource_agent",
+    "energy_agent",
+    "trust_agent",
+    "beamforming_agent",
+    "qos_agent",
+    "policy_agent"
+  ],
+  "consensus_accept_rate": 0.06666666666666667
+}

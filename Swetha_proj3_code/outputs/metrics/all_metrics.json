@@ -1,0 +1,183 @@
+{
+  "agents": {
+    "mobility_agent": {
+      "task": "classification",
+      "model_type": "gradient_boosting",
+      "train": {
+        "accuracy": 0.9212024735198677,
+        "precision": 0.9213633152894767,
+        "recall": 0.9212024735198677,
+        "f1": 0.9212186988087245
+      },
+      "val": {
+        "accuracy": 0.9134285714285715,
+        "precision": 0.9134657261255289,
+        "recall": 0.9134285714285715,
+        "f1": 0.9134345451507037
+      },
+      "test": {
+        "accuracy": 0.9149604799542901,
+        "precision": 0.9151606245736039,
+        "recall": 0.9149604799542901,
+        "f1": 0.9149759076291367,
+        "roc_auc": 0.9634379606032223
+      }
+    },
+    "security_agent": {
+      "task": "classification",
+      "model_type": "random_forest",
+      "train": {
+        "accuracy": 0.9975917875875018,
+        "precision": 0.997609106541675,
+        "recall": 0.9975917875875018,
+        "f1": 0.9975949839186656
+      },
+      "val": {
+        "accuracy": 0.9938095238095238,
+        "precision": 0.9938360630805536,
+        "recall": 0.9938095238095238,
+        "f1": 0.9938175785397684
+      },
+      "test": {
+        "accuracy": 0.9943814874773831,
+        "precision": 0.9944214785449565,
+        "recall": 0.9943814874773831,
+        "f1": 0.9943915516478128,
+        "roc_auc": 0.9997016220830005
+      }
+    },
+    "resource_agent": {
+      "task": "regression",
+      "model_type": "gradient_boosting",
+      "train": {
+        "mae": 11.28574799247168,
+        "rmse": 13.121206841436534,
+        "r2": 0.44099347682336243
+      },
+      "val": {
+        "mae": 11.57675206695147,
+        "rmse": 13.50611138808201,
+        "r2": 0.4142274351055629
+      },
+      "test": {
+        "mae": 11.687764929846415,
+        "rmse": 13.623254841858593,
+        "r2": 0.4035674856433452
+      }
+    },
+    "energy_agent": {
+      "task": "classification",
+      "model_type": "random_forest",
+      "train": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "val": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "test": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "trust_agent": {
+      "task": "regression",
+      "model_type": "mlp",
+      "train": {
+        "mae": 0.09859951328238396,
+        "rmse": 0.12250508734726798,
+        "r2": 0.5668972103945055
+      },
+      "val": {
+        "mae": 0.10042361431621427,
+        "rmse": 0.12490725609857806,
+        "r2": 0.5543953603827277
+      },
+      "test": {
+        "mae": 0.09996940131986497,
+        "rmse": 0.12387811325435143,
+        "r2": 0.5580555721270848
+      }
+    },
+    "beamforming_agent": {
+      "task": "regression",
+      "model_type": "gradient_boosting",
+      "train": {
+        "mae": 15.776878947061613,
+        "rmse": 18.22850034017338,
+        "r2": 0.03151190742648291
+      },
+      "val": {
+        "mae": 15.814083255737886,
+        "rmse": 18.292013065052878,
+        "r2": -0.00426378706281727
+      },
+      "test": {
+        "mae": 16.01405154658057,
+        "rmse": 18.514196227816896,
+        "r2": -0.003581866011429957
+      }
+    },
+    "qos_agent": {
+      "task": "classification",
+      "model_type": "random_forest",
+      "train": {
+        "accuracy": 0.9286516051347987,
+        "precision": 0.9337432377145357,
+        "recall": 0.9286516051347987,
+        "f1": 0.8945003405850004
+      },
+      "val": {
+        "accuracy": 0.9283809523809524,
+        "precision": 0.8618911927437641,
+        "recall": 0.9283809523809524,
+        "f1": 0.8939013753268988
+      },
+      "test": {
+        "accuracy": 0.9284830016188934,
+        "precision": 0.8620806842952301,
+        "recall": 0.9284830016188934,
+        "f1": 0.8940505916531739,
+        "roc_auc": 0.6127167195875585
+      }
+    },
+    "policy_agent": {
+      "task": "classification",
+      "model_type": "gradient_boosting",
+      "train": {
+        "accuracy": 0.8939978366905447,
+        "precision": 0.908722392326635,
+        "recall": 0.8939978366905447,
+        "f1": 0.8772681757585876
+      },
+      "val": {
+        "accuracy": 0.863904761904762,
+        "precision": 0.8316457926816656,
+        "recall": 0.863904761904762,
+        "f1": 0.8407624594424649
+      },
+      "test": {
+        "accuracy": 0.8644890962765451,
+        "precision": 0.8310661023205215,
+        "recall": 0.8644890962765451,
+        "f1": 0.8413221162770176
+      }
+    }
+  },
+  "coordinator": {
+    "samples": 300,
+    "consensus_accept_rate": 0.06666666666666667,
+    "action_distribution": {
+      "none": 274,
+      "handover_trigger": 23,
+      "security_mitigation": 3
+    }
+  }
+}
