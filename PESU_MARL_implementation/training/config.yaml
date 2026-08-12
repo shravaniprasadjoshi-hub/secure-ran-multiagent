@@ -1,0 +1,29 @@
+# training/config.yaml
+# Owners: Shreya (primary)
+
+env:
+  num_cells: 7 # DONT TOUCH - matches hex layout in env/cell.py
+  max_steps: 200 # steps per training episode
+  seed: 42 # DONT TOUCH - reproducibility convention across the project
+
+model:
+  obs_dim: 3 # DONT TOUCH - SINR, delta_RSRP, NACK_density (env/ran_env.py OBS_DIM)
+  action_dim: 3 # DONT TOUCH - defer / trigger-best / trigger-2nd-best
+
+training:
+  num_episodes: 1000
+  log_every: 10 # print + CSV log cadence (episodes)
+  checkpoint_every: 50 # save actor+critic weights (episodes)
+  checkpoint_dir: training/outputs/checkpoints
+  log_csv_path: training/outputs/train_log.csv
+
+eval:
+  eval_every: 50 # run a live-model eval pass every N training episodes
+  eval_episodes: 5
+  deterministic: true # argmax actions during eval, not sampled
+
+  # Final validation pass against MATLAB 3GPP-traceable grids (run manually
+  # via evaluate.py --replay, not part of the periodic training-time eval above)
+  replay_rsrp_path: rsrp_map.csv
+  replay_sinr_path: sinr_map.csv
+  replay_episodes: 5
