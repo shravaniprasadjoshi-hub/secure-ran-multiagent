@@ -58,7 +58,8 @@ class RolloutBuffer:
 
     def compute_returns_and_advantages(self, last_value):
         """
-        GAE-Lambda. last_value: scalar float/tensor bootstrap for the state after the final stored step.
+        GAE-Lambda. last_value: scalar float/tensor bootstrap for the state
+        after the final stored step.
         Returns: (advantages, returns) both as 1D tensors, len == len(self.rewards)
         """
         last_value = float(last_value)
@@ -102,20 +103,23 @@ class MAPPOAgent:
         self.buffer = RolloutBuffer()
 
         # trust score in [0,1] - consumed by coordination/consensus.py + security/byzantine.py
-        # read via AgentManager.get_trust_scores(), don't write directly
+        # shravani/shloka: read via AgentManager.get_trust_scores(), don't write directly
         self.trust_score = 1.0
 
     # rollout
 
-    def select_action(self, obs_t: torch.Tensor):
+    def select_action(self, obs_t: torch.Tensor, deterministic: bool = False):
         """
         obs_t: tensor (obs_dim,)
+        deterministic: if True, take argmax action (eval mode) instead of
+                        sampling (training mode, default - needed for PPO's
+                        stochastic exploration).
         Returns: action (int), log_prob (tensor, detached), entropy (tensor, detached)
         """
         with torch.no_grad():
             logits = self.actor(obs_t)
             dist = Categorical(logits=logits)
-            action = dist.sample()
+            action = torch.argmax(logits) if deterministic else dist.sample()
             log_prob = dist.log_prob(action)
             entropy = dist.entropy()
         return action.item(), log_prob.detach(), entropy.detach()

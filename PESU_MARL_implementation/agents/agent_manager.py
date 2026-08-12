@@ -60,15 +60,16 @@ class AgentManager:
 
     # rollout
 
-    def select_actions(self, obs_list):
+    def select_actions(self, obs_list, deterministic: bool = False):
         """
         obs_list: list of N per-agent observations
+        deterministic: pass True for evaluation (argmax actions, no exploration noise)
         Returns: actions (list[int]), log_probs (list[tensor]), entropies (list[tensor])
         """
         actions, log_probs, entropies = [], [], []
         for agent, obs in zip(self.agents, obs_list):
             obs_t = torch.as_tensor(obs, dtype=torch.float32)
-            action, log_prob, entropy = agent.select_action(obs_t)
+            action, log_prob, entropy = agent.select_action(obs_t, deterministic=deterministic)
             actions.append(action)
             log_probs.append(log_prob)
             entropies.append(entropy)
