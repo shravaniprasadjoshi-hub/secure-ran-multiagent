@@ -24,6 +24,13 @@ eval:
 
   # Final validation pass against MATLAB 3GPP-traceable grids (run manually
   # via evaluate.py --replay, not part of the periodic training-time eval above)
-  replay_rsrp_path: rsrp_map.csv
-  replay_sinr_path: sinr_map.csv
+  replay_rsrp_path: data/matlab/rsrp_map.csv
+  replay_sinr_path: data/matlab/sinr_map.csv
   replay_episodes: 5
+
+# Nokia telemetry 
+# training-scale bootstrap + security ground truth (env/telemetry_loader.py)
+# Separate from env/eval above - not a live simulation trace, doesn't touch RANEnv
+telemetry:
+  csv_path: data/nokia_provided/ran_multi_agent_telemetry_70k.csv
+  metadata_path: data/nokia_provided/dataset_metadata.json
