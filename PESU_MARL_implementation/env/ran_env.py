@@ -30,6 +30,7 @@ from gymnasium import spaces
 from env.cell import build_hex_layout, GRID_SIZE_M, NUM_CELLS
 from env.ue import UE
 from env.channel import ChannelModel, DEFAULT_SEED
+from env.replay_loader import ReplayChannelModel
 
 # JRHT-derived reward weights
 REWARD_RLF = -10.0
@@ -52,16 +53,29 @@ class RANEnv(ParallelEnv):
     7 agents (one per hex cell). Each agent's UE is the single UE currently
     attached to that cell. Actions: 0=defer, 1=trigger to best neighbor,
     2=trigger to 2nd-best neighbor (by instantaneous SINR).
+
+    # IMPORTANT: cell.py/ue.py/channel.py are the RF/mobility
+    # source of truth. Extend those, don't hardcode RF math here.
     """
 
     metadata = {"name": "ran_env_v0"}
 
     def __init__(self, num_cells: int = NUM_CELLS, seed: int = DEFAULT_SEED,
-                 max_steps: int = MAX_EPISODE_STEPS):
+                 max_steps: int = MAX_EPISODE_STEPS,
+                 replay_rsrp_path: str = None, replay_sinr_path: str = None):
+        """
+        replay_rsrp_path / replay_sinr_path: if both given, reset() builds a
+        ReplayChannelModel from the MATLAB grids instead of the live analytic
+        ChannelModel - use this for final 3GPP-traceable evaluation only,
+        not for training (no jamming injection, no RNG shadow fading).
+        """
         super().__init__()
         self.num_cells = num_cells
         self.seed_value = seed
         self.max_steps = max_steps
+        self.use_replay = bool(replay_rsrp_path and replay_sinr_path)
+        self.replay_rsrp_path = replay_rsrp_path
+        self.replay_sinr_path = replay_sinr_path
 
         self.possible_agents = [f"cell_{i}" for i in range(num_cells)]
         self.agents = list(self.possible_agents)
@@ -94,7 +108,10 @@ class RANEnv(ParallelEnv):
         self._rng = np.random.default_rng(self.seed_value)
 
         self.cells = build_hex_layout()
-        self.channel = ChannelModel(seed=self.seed_value)
+        if self.use_replay:
+            self.channel = ReplayChannelModel(self.replay_rsrp_path, self.replay_sinr_path)
+        else:
+            self.channel = ChannelModel(seed=self.seed_value)
         self._t = 0
 
         # one UE per cell, spawned near that cell's position with jitter
@@ -167,7 +184,9 @@ class RANEnv(ParallelEnv):
         best_neighbor_rsrp = max(neighbor_rsrp) if neighbor_rsrp else avg_rsrp[serving]
         delta_rsrp = best_neighbor_rsrp - avg_rsrp[serving]
 
-        # NACK proxy: no live HARQ simulation yet
+        # NACK proxy: no live HARQ simulation yet 
+        # (swap this for real HARQ/BLER stats if/when the PHY sim exposes them)
+        # Modeled as rising sharply as SINR drops below NACK_SINR_PIVOT_DB, clipped [0,1]
         nack_density = float(np.clip(1.0 / (1.0 + np.exp((sinr_serving - NACK_SINR_PIVOT_DB) / 3.0)), 0.0, 1.0))
 
         return np.array([sinr_serving, delta_rsrp, nack_density], dtype=np.float32)
