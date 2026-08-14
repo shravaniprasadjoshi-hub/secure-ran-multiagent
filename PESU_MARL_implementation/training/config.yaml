@@ -1,36 +1,121 @@
-# training/config.yaml
-# Owners: Shreya (primary)
+# ============================================================
+# PESU MARL Implementation — Training Configuration
+# Secure Multi-Agent AI Framework for RAN Control Loops
+# ============================================================
 
-env:
-  num_cells: 7 # DONT TOUCH - matches hex layout in env/cell.py
-  max_steps: 200 # steps per training episode
-  seed: 42 # DONT TOUCH - reproducibility convention across the project
+# -------------------- Environment --------------------
+environment:
+  n_agents: 8
+  n_cells: 48
+  n_gnbs: 12
+  action_space_size: 5
+  state_dim: 10
+  max_steps_per_episode: 200
+  replay_mode: true           # use telemetry CSV instead of random sim
 
-model:
-  obs_dim: 3 # DONT TOUCH - SINR, delta_RSRP, NACK_density (env/ran_env.py OBS_DIM)
-  action_dim: 3 # DONT TOUCH - defer / trigger-best / trigger-2nd-best
+# -------------------- Data Paths --------------------
+data:
+  telemetry_csv: "../../data/ran_multi_agent_telemetry_70k.csv"
+  rsrp_map: "../../data/rsrp_map.csv"
+  sinr_map: "../../data/sinr_map.csv"
+  metadata: "../../data/dataset_metadata.json"
+  rag_corpus: "../../data/rag_corpus.jsonl"
 
-training:
-  num_episodes: 1000
-  log_every: 10 # print + CSV log cadence (episodes)
-  checkpoint_every: 50 # save actor+critic weights (episodes)
-  checkpoint_dir: training/outputs/checkpoints
-  log_csv_path: training/outputs/train_log.csv
+# -------------------- MAPPO --------------------
+mappo:
+  # training
+  n_episodes: 1000
+  batch_size: 32
+  learning_rate_actor: 0.0003
+  learning_rate_critic: 0.001
+  gamma: 0.99                 # discount factor
+  gae_lambda: 0.95            # GAE lambda for advantage estimation
+  clip_epsilon: 0.2           # PPO clip range
+  entropy_coef: 0.01          # encourages exploration
+  value_loss_coef: 0.5
+  max_grad_norm: 0.5          # gradient clipping
 
-eval:
-  eval_every: 50 # run a live-model eval pass every N training episodes
-  eval_episodes: 5
-  deterministic: true # argmax actions during eval, not sampled
+  # network architecture
+  actor_hidden_dims: [128, 64]
+  critic_hidden_dims: [256, 128]
+  activation: "relu"
 
-  # Final validation pass against MATLAB 3GPP-traceable grids (run manually
-  # via evaluate.py --replay, not part of the periodic training-time eval above)
-  replay_rsrp_path: data/matlab/rsrp_map.csv
-  replay_sinr_path: data/matlab/sinr_map.csv
-  replay_episodes: 5
+  # update frequency
+  update_every_n_steps: 10
+  n_update_epochs: 4          # how many epochs per update
 
-# Nokia telemetry 
-# training-scale bootstrap + security ground truth (env/telemetry_loader.py)
-# Separate from env/eval above - not a live simulation trace, doesn't touch RANEnv
-telemetry:
-  csv_path: data/nokia_provided/ran_multi_agent_telemetry_70k.csv
-  metadata_path: data/nokia_provided/dataset_metadata.json
+  # saving
+  save_every_n_episodes: 100
+  checkpoint_dir: "../results/checkpoints"
+
+# -------------------- Consensus --------------------
+consensus:
+  min_agreement: 0.6          # minimum fraction to reach consensus
+  method: "byzantine_robust"  # majority_vote / weighted_vote / byzantine_robust
+
+# -------------------- Trust --------------------
+trust:
+  initial_trust: 1.0
+  decay_rate: 0.05
+  recovery_rate: 0.02
+  min_trust: 0.1
+  max_trust: 1.0
+  quarantine_threshold: 0.3   # below this agent excluded from consensus
+  streak_bonus_every: 10      # apply streak bonus every N steps
+
+# -------------------- Security --------------------
+security:
+  # anomaly detection
+  anomaly_window_size: 20
+  anomaly_threshold: 2.0
+
+  # policy checker
+  max_resource: 100
+  rsrp_threshold: -90         # dBm — below this handover is valid
+  sinr_threshold: 5           # dB — below this handover is valid
+  max_action_change: 2        # max action jump per step
+
+  # byzantine fault injection (for experiments)
+  inject_byzantine: true
+  byzantine_agents: [3, 6]    # which agents to compromise
+  attack_types:
+    3: "gradual"              # agent 3 uses gradual attack
+    6: "random"               # agent 6 uses random attack
+  drift_rate: 0.05
+
+# -------------------- State Sharing --------------------
+state_sharing:
+  history_len: 10
+  staleness_threshold: 5
+  topology: "fully_connected" # fully_connected / ring / custom
+
+# -------------------- Evaluation --------------------
+evaluation:
+  n_eval_episodes: 50
+  eval_every_n_episodes: 100
+  metrics:
+    - "consensus_rate"
+    - "byzantine_detection_rate"
+    - "false_positive_rate"
+    - "avg_trust_score"
+    - "handover_accuracy"
+    - "reward_per_episode"
+
+# -------------------- Logging --------------------
+logging:
+  log_dir: "../results/logs"
+  plot_dir: "../results/plots"
+  metrics_dir: "../results/metrics"
+  log_every_n_steps: 10
+  plot_every_n_episodes: 100
+
+# -------------------- Ablation Study --------------------
+# controls which modules are active
+# use this to compare baseline vs full system for paper
+ablation:
+  use_trust: true
+  use_anomaly_detection: true
+  use_policy_checker: true
+  use_byzantine_robust_consensus: true
+  use_state_sharing: true
+  use_mappo: true             # false = use Nokia's sklearn baseline
