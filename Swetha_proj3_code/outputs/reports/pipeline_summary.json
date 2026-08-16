@@ -1,5 +1,11 @@
 {
-  "agents": [
+  "project": "Secure Multi-Agent AI Framework for RAN Control Loops",
+  "data_split": {
+    "train": 48999,
+    "val": 10500,
+    "test": 10501
+  },
+  "agents_trained": [
     "mobility_agent",
     "security_agent",
     "resource_agent",
@@ -9,5 +15,6 @@
     "qos_agent",
     "policy_agent"
   ],
-  "consensus_accept_rate": 0.06666666666666667
+  "consensus_accept_rate": 0.066,
+  "digital_twin_steps": 200
 }
