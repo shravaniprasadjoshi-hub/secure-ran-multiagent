@@ -4,17 +4,51 @@ env:
   seed: 42
 
 model:
-  obs_dim: 3
-  action_dim: 3
+  obs_dim: 3 # DONT TOUCH - SINR, delta_RSRP, NACK_density (env/ran_env.py OBS_DIM)
+  action_dim: 3 # DONT TOUCH - defer / trigger-best / trigger-2nd-best
 
 training:
   num_episodes: 1000
   log_every: 10
-  checkpoint_every: 100
-  checkpoint_dir: results/checkpoints
-  log_csv_path: results/logs/training_log.csv
+  checkpoint_every: 50
+  checkpoint_dir: training/outputs/checkpoints
+  log_csv_path: training/outputs/train_log.csv
 
 eval:
-  eval_every: 100
-  eval_episodes: 10
+  eval_every: 50
+  eval_episodes: 5
   deterministic: true
+
+  # final validation pass against MATLAB 3GPP-traceable grids 
+  replay_rsrp_path: data/matlab/rsrp_map.csv
+  replay_sinr_path: data/matlab/sinr_map.csv
+  replay_episodes: 5
+
+# nokia telemetry = training-scale bootstrap + security ground truth
+telemetry:
+  csv_path: data/nokia_provided/ran_multi_agent_telemetry_70k.csv
+  metadata_path: data/nokia_provided/dataset_metadata.json
+
+# Byzantine fault injection + security stack, used by training/train_secure.py
+security:
+  byzantine_agents: [3, 6]
+  attack_types:
+    3: gradual
+    6: random
+  drift_rate: 0.05
+
+  anomaly_window_size: 20
+  anomaly_threshold: 2.0
+
+  max_resource: 100
+  rsrp_threshold: -90 # dBm - below this, handover is policy-valid
+  sinr_threshold: 5 # dB - below this, handover is policy-valid
+
+  initial_trust: 1.0
+  decay_rate: 0.05
+  recovery_rate: 0.02
+  min_trust: 0.1
+  max_trust: 1.0
+  quarantine_threshold: 0.3 # below this, agent's action forced to defer
+
+  min_agreement: 0.6 # ConsensusEngine - diagnostic metric only
