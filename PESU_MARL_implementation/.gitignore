@@ -3,3 +3,4 @@ __pycache__/
 results/checkpoints/
 results/logs/
 *.joblib
+!outputs/
