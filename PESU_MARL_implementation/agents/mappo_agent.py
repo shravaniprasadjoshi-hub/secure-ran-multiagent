@@ -26,11 +26,19 @@ CLIP_EPS = 0.2
 ENTROPY_COEF = 0.01
 PPO_EPOCHS = 4
 MAX_GRAD_NORM = 0.5
-TRUST_EMA_ALPHA = 0.1  # trust score smoothing -> read this in coordination/trust.py
+TRUST_EMA_ALPHA = 0.1
 HIDDEN_DIM = 64
 
 
-# rollout storage
+def safe_categorical(logits):
+    """
+    Clamps and sanitizes logits before creating Categorical distribution.
+    Prevents NaN/inf crashes during long training runs.
+    """
+    logits = torch.nan_to_num(logits, nan=0.0, posinf=10.0, neginf=-10.0)
+    logits = torch.clamp(logits, min=-10, max=10)
+    return Categorical(logits=logits)
+
 
 class RolloutBuffer:
     """
@@ -83,8 +91,6 @@ class RolloutBuffer:
         return len(self.rewards)
 
 
-# agent
-
 class MAPPOAgent:
     """
     One per RAN cell. Decentralized actor, trained against the shared
@@ -102,11 +108,7 @@ class MAPPOAgent:
 
         self.buffer = RolloutBuffer()
 
-        # trust score in [0,1] - consumed by coordination/consensus.py + security/byzantine.py
-        # shravani/shloka: read via AgentManager.get_trust_scores(), don't write directly
         self.trust_score = 1.0
-
-    # rollout
 
     def select_action(self, obs_t: torch.Tensor, deterministic: bool = False):
         """
@@ -118,7 +120,7 @@ class MAPPOAgent:
         """
         with torch.no_grad():
             logits = self.actor(obs_t)
-            dist = Categorical(logits=logits)
+            dist = safe_categorical(logits)  # fixed: was Categorical(logits=logits)
             action = torch.argmax(logits) if deterministic else dist.sample()
             log_prob = dist.log_prob(action)
             entropy = dist.entropy()
@@ -126,8 +128,6 @@ class MAPPOAgent:
 
     def store_transition(self, obs, global_obs, action, log_prob, reward, done, value):
         self.buffer.add(obs, global_obs, action, log_prob, reward, done, value)
-
-    # training
 
     def update(self, critic: Critic, last_global_obs: torch.Tensor):
         """
@@ -150,7 +150,7 @@ class MAPPOAgent:
         epoch_losses = []
         for _ in range(PPO_EPOCHS):
             logits = self.actor(obs_batch)
-            dist = Categorical(logits=logits)
+            dist = safe_categorical(logits)  # fixed: was Categorical(logits=logits)
             new_log_probs = dist.log_prob(actions_batch)
             entropy = dist.entropy().mean()
 
@@ -166,18 +166,14 @@ class MAPPOAgent:
 
             epoch_losses.append(actor_loss.item())
 
-        self.buffer.clear()  # DONT TOUCH ordering - agent_manager.update() depends on this happening here
+        self.buffer.clear()
         return sum(epoch_losses) / len(epoch_losses)
-
-    # trust
 
     def update_trust_score(self, agreement: float):
         """EMA of consensus agreement in [0,1]. Called by AgentManager.update_trust_scores()."""
         agreement = max(0.0, min(1.0, float(agreement)))
         self.trust_score = (1 - TRUST_EMA_ALPHA) * self.trust_score + TRUST_EMA_ALPHA * agreement
         self.trust_score = max(0.0, min(1.0, self.trust_score))
-
-    # checkpointing
 
     def save(self, path: str):
         torch.save(self.actor.state_dict(), path)
