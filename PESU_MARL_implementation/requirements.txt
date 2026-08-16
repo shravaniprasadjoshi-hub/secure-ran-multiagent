@@ -8,3 +8,4 @@ stable-baselines3
 matplotlib
 seaborn
 tqdm
+pettingzoo
