@@ -4,3 +4,5 @@ results/checkpoints/
 results/logs/
 *.joblib
 !outputs/
+training/outputs/checkpoints/
+training/outputs/checkpoints_secure/
