@@ -8,6 +8,9 @@ Usage: python training/train.py --config training/config.yaml
 import argparse
 import csv
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import yaml
 

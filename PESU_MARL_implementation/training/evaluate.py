@@ -7,6 +7,9 @@ Usage: python training/evaluate.py --config training/config.yaml --checkpoint <d
 
 import argparse
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root, so env/ and agents/ import regardless of cwd
 
 import yaml
 
