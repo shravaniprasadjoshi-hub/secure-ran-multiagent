@@ -85,6 +85,14 @@ class AnomalyDetector:
         If an agent keeps voting differently from everyone else, suspicious.
         actions: current step's actions dict
         Returns list of flagged agent ids.
+
+        # FIX (by me shreyashree, this is a post-integration-test): 
+        # suspicion_scores only ever grew before this - an honest agent that legitimately disagreed
+        # with the group ~6 times (0.5 * 6 = 3.0) got flagged EVERY remaining step of the episode, forever, with no way to recover.
+        # In our env agents legitimately disagree often (each observes a different UE's signal), so this was flagging ~45% of clean
+        # agents. Added symmetric decay on agreement: an agent alternating disagree/agree roughly 50/50 now nets to ~0 and stays unflagged;
+        # only agents disagreeing MORE than they agree accumulate toward the 3.0 threshold. See training/train_secure.py docstring for
+        # the false_positive_rate numbers that motivated this.
         """
         flagged = []
         
@@ -108,6 +116,10 @@ class AnomalyDetector:
                         "their_action": action,
                         "majority_action": majority_action
                     })
+            else:
+                # decay - agreeing with the group lets suspicion recover,
+                # symmetric with the 0.5 increment above
+                self.suspicion_scores[agent_id] = max(0.0, self.suspicion_scores[agent_id] - 0.5)
 
         return flagged
 
