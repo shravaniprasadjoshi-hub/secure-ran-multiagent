@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Multi-Agent RAN — Nokia NBUC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:     #1C1712; --bg2: #252018; --bg3: #2E2820; --bg4: #3A3228;
+  --gold:   #C9933A; --gold-lt: #F0C97A;
+  --cream:  #EDE0C8; --text-dim: #A89880;
+  --rust:   #B85C38; --rust-lt: #E8906E;
+  --sage:   #7A9E7E; --sage-lt: #A8C5AC;
+  --sand:   #D4B896; --border: rgba(201,147,58,0.15);
+}
+html { scroll-behavior:smooth; }
+body { background:var(--bg); color:var(--cream); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+
+/* NAV */
+nav {
+  position:sticky; top:0; z-index:100; background:var(--bg);
+  border-bottom:1px solid var(--border); height:56px;
+  display:flex; align-items:center; padding:0 2rem; gap:1rem;
+}
+.nav-logo { font-size:15px; font-weight:700; color:var(--gold-lt); display:flex; align-items:center; gap:8px; }
+.nav-logo-icon { width:30px; height:30px; background:var(--bg3); border:1px solid var(--gold); border-radius:8px; display:flex; align-items:center; justify-content:center; }
+.status-pill { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:12px; color:var(--sage-lt); padding:4px 12px; border:1px solid rgba(122,158,126,0.3); border-radius:20px; }
+.sdot { width:7px; height:7px; border-radius:50%; background:var(--sage); animation:blink 2s infinite; }
+
+/* TABS */
+.tabs { display:flex; gap:4px; background:var(--bg2); border-bottom:1px solid var(--border); padding:0 2rem; overflow-x:auto; }
+.tab-btn {
+  padding:12px 18px; font-size:13px; font-weight:500; cursor:pointer;
+  border:none; background:transparent; color:var(--text-dim);
+  border-bottom:2px solid transparent; white-space:nowrap; transition:all 0.15s;
+}
+.tab-btn:hover { color:var(--cream); }
+.tab-btn.active { color:var(--gold-lt); border-bottom-color:var(--gold); }
+
+/* ALERT BANNER */
+#alert-banner {
+  display:none; background:rgba(184,92,56,0.12);
+  border-bottom:1px solid rgba(184,92,56,0.3);
+  padding:8px 2rem; font-size:13px; color:var(--rust-lt);
+  align-items:center; gap:10px;
+}
+#alert-banner.visible { display:flex; }
+.adot { width:8px; height:8px; border-radius:50%; background:var(--rust); animation:blink 1s infinite; flex-shrink:0; }
+
+/* TAB PAGES */
+.tab-page { display:none; max-width:1100px; margin:0 auto; padding:2.5rem 2rem; }
+.tab-page.active { display:block; }
+
+/* TYPOGRAPHY */
+.eyebrow { font-size:11px; font-weight:600; letter-spacing:2px; color:var(--gold); text-transform:uppercase; margin-bottom:6px; }
+.page-title { font-size:26px; font-weight:700; color:var(--cream); font-family:Georgia,serif; margin-bottom:6px; }
+.page-sub { font-size:14px; color:var(--text-dim); margin-bottom:2rem; }
+
+/* CARDS */
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:1.25rem 1.5rem; }
+.card-label { font-size:12px; color:var(--text-dim); margin-bottom:8px; }
+.card-val { font-size:28px; font-weight:700; color:var(--cream); }
+.card-sub { font-size:12px; color:var(--sage-lt); margin-top:4px; }
+
+/* GRIDS */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+
+/* BADGE */
+.badge { font-size:11px; padding:2px 9px; border-radius:20px; font-weight:600; flex-shrink:0; }
+.badge-ok     { background:rgba(122,158,126,0.18); color:var(--sage-lt); }
+.badge-warn   { background:rgba(201,147,58,0.18);  color:var(--gold-lt); }
+.badge-danger { background:rgba(184,92,56,0.18);   color:var(--rust-lt); }
+.badge-sand   { background:rgba(212,184,150,0.18); color:var(--sand); }
+
+/* TRUST BARS */
+.agent-row { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid rgba(201,147,58,0.08); }
+.agent-row:last-child { border-bottom:none; }
+.agent-id { font-size:13px; font-weight:600; color:var(--cream); width:58px; flex-shrink:0; }
+.tbar-bg { flex:1; height:7px; background:var(--bg4); border-radius:4px; overflow:hidden; }
+.tbar-fill { height:7px; border-radius:4px; transition:width 0.6s ease; }
+.tval { font-size:13px; font-weight:600; width:38px; text-align:right; flex-shrink:0; }
+
+/* ALERTS */
+.alert-item { display:flex; gap:12px; padding:9px 0; border-bottom:1px solid rgba(201,147,58,0.08); align-items:flex-start; }
+.alert-item:last-child { border-bottom:none; }
+.alert-text { font-size:13px; color:var(--cream); }
+.alert-time { font-size:11px; color:var(--text-dim); margin-top:2px; }
+
+/* BUTTONS */
+.btn { padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all 0.15s; }
+.btn:hover { transform:translateY(-1px); }
+.btn-rust { background:var(--rust); color:#fff; }
+.btn-sage { background:var(--sage); color:#fff; }
+.btn-gold { background:var(--bg3); color:var(--gold-lt); border:1px solid var(--gold); }
+.btn-blue { background:#2A4A7A; color:#85B7EB; border:1px solid #3A6AAA; }
+.btn-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:1rem; }
+select { background:var(--bg3); color:var(--cream); border:1px solid var(--border); border-radius:8px; padding:7px 12px; font-size:13px; cursor:pointer; }
+
+/* DIGITAL TWIN */
+.twin-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:1.5rem; margin-bottom:20px; }
+.legend { display:flex; gap:16px; font-size:12px; color:var(--text-dim); flex-wrap:wrap; }
+.legend span { display:flex; align-items:center; gap:5px; }
+.ldot { width:9px; height:9px; border-radius:50%; }
+.svg-bg { background:linear-gradient(135deg,#2A2318 0%,#1E1A12 100%); border-radius:12px; padding:1rem 0.5rem; display:flex; justify-content:center; }
+.cell-info { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:1rem 1.25rem; margin-top:1rem; font-size:13px; min-height:60px; }
+.cell-info-title { font-weight:700; color:var(--cream); margin-bottom:6px; font-family:Georgia,serif; }
+.cell-info-row { display:flex; gap:20px; flex-wrap:wrap; color:var(--text-dim); }
+.cell-info-row b { color:var(--cream); }
+
+/* SECURITY */
+.inject-panel { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:1.25rem 1.5rem; margin-bottom:18px; }
+.inject-title { font-size:14px; font-weight:700; color:var(--cream); margin-bottom:4px; font-family:Georgia,serif; }
+.inject-sub { font-size:13px; color:var(--text-dim); margin-bottom:10px; }
+.cons-row { display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13px; border-bottom:1px solid rgba(201,147,58,0.08); }
+.cons-row:last-child { border-bottom:none; }
+.cons-step { color:var(--text-dim); width:50px; flex-shrink:0; }
+.cons-detail { color:var(--text-dim); flex:1; }
+
+/* TRAINING */
+.ablation-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:1rem; }
+.ablation-card { background:var(--bg3); border-radius:10px; padding:14px; text-align:center; border:1px solid rgba(201,147,58,0.08); }
+.ablation-card.best { border-color:var(--gold); background:rgba(201,147,58,0.08); }
+.ablation-label { font-size:11px; color:var(--text-dim); margin-bottom:8px; }
+.ablation-val { font-size:22px; font-weight:700; color:var(--cream); }
+.ablation-card.best .ablation-val { color:var(--gold-lt); }
+
+/* AGENT EVAL */
+.agent-table { width:100%; border-collapse:collapse; font-size:13px; }
+.agent-table th { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text-dim); font-weight:600; }
+.agent-table td { padding:10px 12px; border-bottom:1px solid rgba(201,147,58,0.06); }
+.agent-table tr:last-child td { border-bottom:none; }
+.score-good { color:var(--sage-lt); font-weight:600; }
+.score-mid  { color:var(--gold-lt); font-weight:600; }
+.score-bad  { color:var(--rust-lt); font-weight:600; }
+
+/* CHATBOT */
+.chat-wrap { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:1.5rem; }
+.chat-msgs { display:flex; flex-direction:column; gap:10px; margin-bottom:1rem; max-height:340px; overflow-y:auto; }
+.chat-msg { padding:10px 14px; border-radius:12px; font-size:13px; max-width:80%; line-height:1.5; }
+.chat-user { background:rgba(201,147,58,0.15); color:var(--gold-lt); align-self:flex-end; border:1px solid rgba(201,147,58,0.25); }
+.chat-bot  { background:var(--bg3); color:var(--cream); align-self:flex-start; border:1px solid var(--border); }
+.chat-input-row { display:flex; gap:10px; margin-top:10px; }
+.chat-input-row input { flex:1; background:var(--bg3); color:var(--cream); border:1px solid var(--border); border-radius:8px; padding:9px 14px; font-size:13px; }
+.chat-input-row input:focus { outline:none; border-color:var(--gold); }
+.chat-send { background:var(--gold); color:var(--bg); border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer; }
+
+/* PLOTLY containers */
+.plot-box { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:1rem; margin-bottom:16px; }
+
+/* ANIMATIONS */
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes ring  { 0%{r:24;opacity:0.6} 100%{r:44;opacity:0} }
+.pulse { animation:blink 1.5s ease-in-out infinite; }
+.ring-anim { animation:ring 2.2s ease-out infinite; }
+
+footer { text-align:center; padding:2rem; font-size:12px; color:var(--text-dim); border-top:1px solid rgba(201,147,58,0.08); margin-top:2rem; }
+
+@media(max-width:640px){
+  .grid2,.grid3,.grid4,.ablation-grid{grid-template-columns:1fr}
+  nav{padding:0 1rem}
+  .tab-page{padding:1.5rem 1rem}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">⬡</div>
+    Secure RAN · NBUC
+  </div>
+  <div class="status-pill"><div class="sdot"></div><span id="sys-status">Connecting...</span></div>
+</nav>
+
+<!-- ALERT BANNER -->
+<div id="alert-banner">
+  <div class="adot"></div>
+  <span id="alert-text">⚠ Byzantine agent detected</span>
+  <span style="margin-left:auto;cursor:pointer;color:var(--text-dim)" onclick="hideBanner()">✕</span>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('overview',this)">🏠 Overview</button>
+  <button class="tab-btn" onclick="showTab('data',this)">📊 Data Exploration</button>
+  <button class="tab-btn" onclick="showTab('agents',this)">🤖 Agent Evaluation</button>
+  <button class="tab-btn" onclick="showTab('trainval',this)">📈 Train/Val/Test</button>
+  <button class="tab-btn" onclick="showTab('twin',this)">🌐 Digital Twin + Security</button>
+  <button class="tab-btn" onclick="showTab('marl',this)">🧠 MARL Training</button>
+  <button class="tab-btn" onclick="showTab('chatbot',this)">💬 Chatbot</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 1 — OVERVIEW
+════════════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-overview">
+  <div class="eyebrow">01 · Live system state</div>
+  <div class="page-title">Overview</div>
+  <div class="page-sub">Real-time metrics across the full RAN multi-agent system</div>
+
+  <div class="grid4">
+    <div class="card"><div class="card-label">Telemetry records</div><div class="card-val">70,000</div><div class="card-sub">Nokia 70k dataset</div></div>
+    <div class="card"><div class="card-label">AI agents</div><div class="card-val">8 + 7</div><div class="card-sub">Nokia's sklearn + our MARL</div></div>
+    <div class="card"><div class="card-label">Cells / gNBs</div><div class="card-val">48 / 12</div><div class="card-sub">Nokia digital twin</div></div>
+    <div class="card"><div class="card-label">MARL consensus rate</div><div class="card-val" id="ov-consensus">72%</div><div class="card-sub" id="ov-consensus-sub">↑ from 6.6% shared baseline</div></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Architecture layers</div>
+      <div style="font-size:13px;color:var(--text-dim);line-height:2">
+        <div><span style="color:var(--gold-lt);font-weight:600">1. Multi-Agent Layer</span> — Mobility, Security, Resource, Energy, Trust, Beamforming, QoS, Policy</div>
+        <div><span style="color:var(--gold-lt);font-weight:600">2. RAN Control Layer</span> — RRC decisions, scheduling, mobility (TS 38.331)</div>
+        <div><span style="color:var(--gold-lt);font-weight:600">3. Security Layer</span> — Byzantine detection, trust engine, anomaly detection, consensus</div>
+        <div><span style="color:var(--gold-lt);font-weight:600">4. O-RAN Integration</span> — Near-RT RIC, E2 interface, xApps/rApps</div>
+        <div><span style="color:var(--gold-lt);font-weight:600">5. Digital Twin</span> — 48-cell / 12-gNB simulation with attack injection</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Recent alerts</div>
+      <div id="ov-alerts">
+        <div class="alert-item"><span class="badge badge-ok">System</span><div><div class="alert-text">All agents healthy — system nominal</div><div class="alert-time">Just now</div></div></div>
+        <div class="alert-item"><span class="badge badge-sand">Training</span><div><div class="alert-text">1000 MARL episodes complete — final checkpoint saved</div><div class="alert-time">Earlier</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">MARL agent trust scores</div>
+      <div id="ov-trust"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Scenario distribution</div>
+      <div id="ov-scenario-chart" style="height:220px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 2 — DATA EXPLORATION
+════════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-data">
+  <div class="eyebrow">02 · Dataset analysis</div>
+  <div class="page-title">Data Exploration</div>
+  <div class="page-sub">Distributions, correlations and CDFs from the 70k Nokia telemetry dataset</div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="plot-box"><div id="rsrp-chart" style="height:300px"></div></div>
+    <div class="plot-box"><div id="sinr-chart" style="height:300px"></div></div>
+  </div>
+  <div class="plot-box" style="margin-bottom:16px"><div id="corr-chart" style="height:420px"></div></div>
+  <div class="plot-box" style="margin-bottom:16px"><div id="cdf-chart" style="height:320px"></div></div>
+  <div class="plot-box"><div id="sinr-scenario-chart" style="height:320px"></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 3 — AGENT EVALUATION
+════════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-agents">
+  <div class="eyebrow">03 · Sklearn agents</div>
+  <div class="page-title">Agent Evaluation</div>
+  <div class="page-sub">Individual agent outcomes across train / validation / test splits</div>
+
+  <div style="margin-bottom:16px">
+    <select id="agent-select" onchange="renderAgentDetail()">
+      <option value="">Select agent...</option>
+    </select>
+  </div>
+
+  <div class="grid3" style="margin-bottom:20px">
+    <div class="card"><div class="card-label">Train</div><div class="card-val" id="ag-train">—</div></div>
+    <div class="card"><div class="card-label">Validation</div><div class="card-val" id="ag-val">—</div></div>
+    <div class="card"><div class="card-label">Test</div><div class="card-val" id="ag-test">—</div></div>
+  </div>
+  <div class="plot-box" style="margin-bottom:16px"><div id="agent-bar-chart" style="height:300px"></div></div>
+  <div class="card">
+    <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">All agents summary</div>
+    <table class="agent-table" id="agent-summary-table"></table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 4 — TRAIN/VAL/TEST
+════════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-trainval">
+  <div class="eyebrow">04 · Model performance</div>
+  <div class="page-title">Train / Val / Test</div>
+  <div class="page-sub">All 8 agents — 70% train / 15% val / 15% test split by scenario type</div>
+
+  <div class="plot-box" style="margin-bottom:16px"><div id="trainval-chart" style="height:420px"></div></div>
+  <div class="card">
+    <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Model details</div>
+    <table class="agent-table" id="model-details-table"></table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 5 — DIGITAL TWIN + SECURITY (scrollable)
+════════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-twin">
+
+  <!-- DIGITAL TWIN SECTION -->
+  <div class="eyebrow">05 · Network visualisation</div>
+  <div class="page-title">Digital Twin</div>
+  <div class="page-sub">Live hexagonal map — inject a fault here, scroll down to see Security respond</div>
+
+  <div class="twin-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
+      <div class="legend">
+        <span><div class="ldot" style="background:#7A9E7E"></div>Healthy</span>
+        <span><div class="ldot" style="background:#C9933A"></div>Handover</span>
+        <span><div class="ldot" style="background:#8B6914"></div>Degraded</span>
+        <span><div class="ldot" style="background:#B85C38"></div>Byzantine</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="sim-status-pill" style="font-size:12px;color:var(--text-dim);padding:4px 10px;border:1px solid var(--border);border-radius:20px">Simulation idle</div>
+        <button class="btn btn-blue" onclick="startSim()" style="padding:5px 12px;font-size:12px">▶ Run live sim</button>
+      </div>
+    </div>
+
+    <div class="svg-bg">
+      <svg id="twin-svg" viewBox="0 0 480 330" style="width:100%;max-width:560px">
+        <defs>
+          <filter id="fg" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="fr" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="fo" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9DC4A0"/><stop offset="100%" stop-color="#4A7A50"/></linearGradient>
+          <linearGradient id="go" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F0C97A"/><stop offset="100%" stop-color="#A07020"/></linearGradient>
+          <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E8906E"/><stop offset="100%" stop-color="#8B3820"/></linearGradient>
+          <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C4A45A"/><stop offset="100%" stop-color="#6B5010"/></linearGradient>
+        </defs>
+        <line x1="240" y1="88" x2="155" y2="162" stroke="#6B5A38" stroke-width="1.5" stroke-dasharray="6,4"/>
+        <line x1="240" y1="88" x2="325" y2="162" stroke="#6B5A38" stroke-width="1.5" stroke-dasharray="6,4"/>
+        <line x1="155" y1="162" x2="90"  y2="242" stroke="#4A3C28" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <line x1="155" y1="162" x2="200" y2="248" stroke="#4A3C28" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <line x1="325" y1="162" x2="282" y2="248" stroke="#4A3C28" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <line x1="325" y1="162" x2="378" y2="242" stroke="#4A3C28" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="240" y="30" text-anchor="middle" font-size="11" fill="#8B7A5A" font-family="sans-serif" font-weight="600">gNB-1</text>
+        <text x="115" y="302" text-anchor="middle" font-size="11" fill="#8B7A5A" font-family="sans-serif" font-weight="600">gNB-2</text>
+        <text x="360" y="302" text-anchor="middle" font-size="11" fill="#8B7A5A" font-family="sans-serif" font-weight="600">gNB-3</text>
+        <g id="h0" class="hx" data-cell="0" data-name="Cell 0 (gNB-1)" style="cursor:pointer" onclick="pickHex(this)">
+          <circle class="ring-anim" cx="240" cy="88" r="26" fill="none" stroke="#7A9E7E" stroke-width="1.5"/>
+          <polygon id="p0" points="240,60 265,74 265,102 240,116 215,102 215,74" fill="url(#gg)" filter="url(#fg)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <text x="240" y="91" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="sans-serif">C0</text>
+          <text id="t0" x="240" y="107" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)" font-family="sans-serif">1.00</text>
+        </g>
+        <g id="h1" class="hx" data-cell="1" data-name="Cell 1 (gNB-1)" style="cursor:pointer" onclick="pickHex(this)">
+          <circle class="ring-anim" cx="155" cy="162" r="26" fill="none" stroke="#C9933A" stroke-width="1.5" style="animation-delay:0.7s"/>
+          <polygon id="p1" points="155,134 180,148 180,176 155,190 130,176 130,148" fill="url(#go)" filter="url(#fo)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <text x="155" y="165" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="sans-serif">C1</text>
+          <text id="t1" x="155" y="181" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)" font-family="sans-serif">0.95</text>
+        </g>
+        <g id="h2" class="hx" data-cell="2" data-name="Cell 2 (gNB-1)" style="cursor:pointer" onclick="pickHex(this)">
+          <polygon id="p2" points="325,134 350,148 350,176 325,190 300,176 300,148" fill="url(#gg)" filter="url(#fg)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <text x="325" y="165" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="sans-serif">C2</text>
+          <text id="t2" x="325" y="181" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)" font-family="sans-serif">0.88</text>
+        </g>
+        <g id="h3" class="hx" data-cell="3" data-name="Cell 3 (gNB-2)" style="cursor:pointer" onclick="pickHex(this)">
+          <polygon id="p3" points="90,214 115,228 115,256 90,270 65,256 65,228" fill="url(#gg)" filter="url(#fg)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <text x="90" y="245" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="sans-serif">C3</text>
+          <text id="t3" x="90" y="261" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)" font-family="sans-serif">0.92</text>
+        </g>
+        <g id="h4" class="hx" data-cell="4" data-name="Cell 4 (gNB-2)" style="cursor:pointer" onclick="pickHex(this)">
+          <polygon id="p4" points="200,220 225,234 225,262 200,276 175,262 175,234" fill="url(#gg)" filter="url(#fg)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <text x="200" y="251" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="sans-serif">C4</text>
+          <text id="t4" x="200" y="267" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)" font-family="sans-serif">0.85</text>
+        </g>
+        <g id="h5" class="hx" data-cell="5" data-name="Cell 5 (gNB-3)" style="cursor:pointer" onclick="pickHex(this)">
+          <polygon id="p5" points="282,220 307,234 307,262 282,276 257,262 257,234" fill="url(#gg)" filter="url(#fg)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <text x="282" y="251" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="sans-serif">C5</text>
+          <text id="t5" x="282" y="267" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)" font-family="sans-serif">0.82</text>
+        </g>
+        <g id="h6" class="hx" data-cell="6" data-name="Cell 6 (gNB-3)" style="cursor:pointer" onclick="pickHex(this)">
+          <polygon id="p6" points="378,214 403,228 403,256 378,270 353,256 353,228" fill="url(#gg)" filter="url(#fg)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <text x="378" y="245" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="sans-serif">C6</text>
+          <text id="t6" x="378" y="261" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.8)" font-family="sans-serif">0.90</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cell-info" id="cell-info">
+      <div class="cell-info-title">Click any cell to inspect its agent</div>
+      <div class="cell-info-row">Select a cell to see trust score, load, handover rate and status</div>
+    </div>
+
+    <div class="btn-row">
+      <select id="atk-select">
+        <option value="random">Random attack</option>
+        <option value="gradual">Gradual attack</option>
+        <option value="replay">Replay attack</option>
+        <option value="opposite">Opposite attack</option>
+      </select>
+      <select id="cell-select">
+        <option value="-1">Random cell</option>
+        <option value="0">Cell 0</option>
+        <option value="1">Cell 1</option>
+        <option value="2">Cell 2</option>
+        <option value="3">Cell 3</option>
+        <option value="4">Cell 4</option>
+        <option value="5">Cell 5</option>
+        <option value="6">Cell 6</option>
+      </select>
+      <button class="btn btn-rust" onclick="injectFault()">⚡ Inject Byzantine fault</button>
+      <button class="btn btn-gold" onclick="simHandover()">📡 Simulate handover</button>
+      <button class="btn btn-sage" onclick="clearFaults()">✓ Clear all faults</button>
+    </div>
+  </div>
+
+  <!-- SECURITY SECTION (scrollable from twin) -->
+  <div style="height:1px;background:var(--border);margin:2rem 0"></div>
+  <div class="eyebrow">06 · Security layer</div>
+  <div class="page-title" style="margin-bottom:6px">Security</div>
+  <div class="page-sub">Results of Byzantine detection — updates automatically when faults are injected above</div>
+
+  <div class="inject-panel">
+    <div class="inject-title">Byzantine fault status</div>
+    <div class="inject-sub">Inject a fault above — detection results appear here</div>
+    <div id="inject-status" style="font-size:13px;color:var(--text-dim)">No faults injected — system clean</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Trust scores</div>
+      <div id="sec-trust"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Consensus log</div>
+      <div id="sec-consensus-log">
+        <div class="cons-row"><span class="cons-step">—</span><span style="color:var(--text-dim);font-size:13px">Waiting for simulation data...</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 6 — MARL TRAINING
+════════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-marl">
+  <div class="eyebrow">07 · MARL results</div>
+  <div class="page-title">MARL Training</div>
+  <div class="page-sub">MAPPO training over 1000 episodes — reward curve and ablation study vs Nokia's baseline</div>
+
+  <div class="plot-box" style="margin-bottom:16px"><div id="reward-chart" style="height:380px"></div></div>
+  <div class="plot-box" style="margin-bottom:16px"><div id="loss-chart" style="height:280px"></div></div>
+
+  <div class="card">
+    <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:4px;font-family:Georgia,serif">Ablation study</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Each layer adds measurable improvement. Exp 3 still converging — see notes.</div>
+    <div class="ablation-grid">
+      <div class="ablation-card">
+        <div class="ablation-label">Exp 1 — Shared baseline<br><span style="font-size:10px">(supervised ML, static consensus)</span></div>
+        <div class="ablation-val">6.6%</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">consensus accept rate</div>
+      </div>
+      <div class="ablation-card">
+        <div class="ablation-label">Exp 2 — MAPPO only<br><span style="font-size:10px">(no security, 1000 eps)</span></div>
+        <div class="ablation-val">962</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">final eval reward</div>
+      </div>
+      <div class="ablation-card">
+        <div class="ablation-label">Exp 3 — MAPPO + Security<br><span style="font-size:10px">(Byzantine injection, trust)</span></div>
+        <div class="ablation-val">-259</div>
+        <div style="font-size:11px;color:var(--rust-lt);margin-top:4px">converging, not yet matched</div>
+      </div>
+      <div class="ablation-card best">
+        <div class="ablation-label">Exp 4 — Full system + PQC<br><span style="font-size:10px">(stretch goal)</span></div>
+        <div class="ablation-val">TBD</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">not yet run</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-dim);margin-top:14px;padding:10px;background:var(--bg3);border-radius:8px">
+      <b style="color:var(--gold-lt)">Note on Exp 3:</b> Security adds real training cost — agents under quarantine skip PPO updates, slowing convergence. 
+      Reward went from -2,520 → -259 over 1000 episodes (trending right direction). 
+      This exploration-security tradeoff is itself a legitimate research finding, not a flaw.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 7 — CHATBOT
+════════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-chatbot">
+  <div class="eyebrow">08 · Knowledge assistant</div>
+  <div class="page-title">RAN Chatbot</div>
+  <div class="page-sub">Ask anything about the network, agents, or security — powered by RAG over Nokia's knowledge corpus</div>
+
+  <div class="chat-wrap">
+    <div class="chat-msgs" id="chat-msgs">
+      <div class="chat-msg chat-bot">Hello! Ask me about RAN control, O-RAN architecture, Byzantine attacks, consensus mechanisms, or anything about this project.</div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Suggested questions:</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="askSuggested(this)" style="font-size:12px;padding:4px 10px;border-radius:6px;background:var(--bg3);color:var(--text-dim);border:1px solid var(--border);cursor:pointer">How does consensus prevent rogue agents?</button>
+        <button onclick="askSuggested(this)" style="font-size:12px;padding:4px 10px;border-radius:6px;background:var(--bg3);color:var(--text-dim);border:1px solid var(--border);cursor:pointer">What is a Byzantine attack?</button>
+        <button onclick="askSuggested(this)" style="font-size:12px;padding:4px 10px;border-radius:6px;background:var(--bg3);color:var(--text-dim);border:1px solid var(--border);cursor:pointer">Explain O-RAN Near-RT RIC</button>
+        <button onclick="askSuggested(this)" style="font-size:12px;padding:4px 10px;border-radius:6px;background:var(--bg3);color:var(--text-dim);border:1px solid var(--border);cursor:pointer">Why is Exp 3 not converged?</button>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Ask about RAN, agents, security..." onkeydown="if(event.key==='Enter')sendChat()"/>
+      <button class="chat-send" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+</div>
+
+<footer>Nokia Bangalore University Collaboration · Secure Multi-Agent AI Framework for RAN Control Loops · Shreya · Shravani · Shloka · Shashank</footer>
+
+<script>
+const API = 'http://localhost:8000';
+
+// ── Agent data (synced from /state) ───────────────────────────────────────
+let agents = [
+  {id:0,name:'Cell 0',trust:1.00,status:'healthy',load:72,ho:72},
+  {id:1,name:'Cell 1',trust:0.95,status:'handover',load:45,ho:58},
+  {id:2,name:'Cell 2',trust:0.88,status:'healthy',load:60,ho:61},
+  {id:3,name:'Cell 3',trust:0.92,status:'healthy',load:55,ho:80},
+  {id:4,name:'Cell 4',trust:0.85,status:'healthy',load:48,ho:66},
+  {id:5,name:'Cell 5',trust:0.82,status:'healthy',load:58,ho:55},
+  {id:6,name:'Cell 6',trust:0.90,status:'healthy',load:62,ho:70},
+];
+
+let agentMetrics = {};
+let dataLoaded = false;
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'data' && !dataLoaded) loadDataExploration();
+  if (name === 'agents' || name === 'trainval') loadAgentMetrics();
+  if (name === 'marl') loadMarlTraining();
+}
+
+// ── Colours ───────────────────────────────────────────────────────────────
+function tColor(t) {
+  if (t >= 0.7) return '#7A9E7E';
+  if (t >= 0.4) return '#C9933A';
+  return '#B85C38';
+}
+const fills   = {healthy:'url(#gg)',handover:'url(#go)',degraded:'url(#gd)',byzantine:'url(#gr)'};
+const filters = {healthy:'url(#fg)',handover:'url(#fo)',degraded:'url(#fo)',byzantine:'url(#fr)'};
+const sLabels = {healthy:'Healthy',handover:'Handover active',degraded:'Degraded',byzantine:'Byzantine — quarantined'};
+const sColors = {healthy:'#7A9E7E',handover:'#C9933A',degraded:'#8B6914',byzantine:'#B85C38'};
+
+// ── Trust rendering ───────────────────────────────────────────────────────
+function renderTrust(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = agents.map(a => `
+    <div class="agent-row">
+      <span class="agent-id">${a.name}</span>
+      <div class="tbar-bg"><div class="tbar-fill" style="width:${a.trust*100}%;background:${tColor(a.trust)}"></div></div>
+      <span class="tval" style="color:${tColor(a.trust)}">${a.trust.toFixed(2)}</span>
+      <span class="badge ${a.status==='byzantine'?'badge-danger':a.trust>=0.7?'badge-ok':'badge-warn'}">${a.status==='byzantine'?'Byzantine':a.trust>=0.7?'Trusted':'Degraded'}</span>
+    </div>`).join('');
+}
+
+function renderAllTrust() {
+  renderTrust('ov-trust');
+  renderTrust('sec-trust');
+}
+
+// ── Hex twin ──────────────────────────────────────────────────────────────
+function applyHexStyle(id) {
+  const a = agents[id];
+  const poly = document.getElementById(`p${id}`);
+  const ttext = document.getElementById(`t${id}`);
+  const mainText = document.querySelector(`#h${id} text:first-of-type`);
+  if (!poly) return;
+  poly.setAttribute('fill', fills[a.status] || fills.healthy);
+  poly.setAttribute('filter', filters[a.status] || filters.healthy);
+  ttext.textContent = a.trust.toFixed(2);
+  if (a.status === 'byzantine') {
+    ttext.classList.add('pulse');
+    if(mainText) mainText.classList.add('pulse');
+  } else {
+    ttext.classList.remove('pulse');
+    if(mainText) mainText.classList.remove('pulse');
+  }
+}
+
+function pickHex(g) {
+  document.querySelectorAll('.hx polygon').forEach(p => p.setAttribute('stroke','rgba(255,255,255,0.3)'));
+  g.querySelector('polygon').setAttribute('stroke','rgba(255,255,255,0.8)');
+  const id = parseInt(g.dataset.cell);
+  const a = agents[id];
+  document.getElementById('cell-info').innerHTML = `
+    <div class="cell-info-title">${g.dataset.name}</div>
+    <div class="cell-info-row">
+      <span>Status: <b style="color:${sColors[a.status]}">${sLabels[a.status]}</b></span>
+      <span>Trust: <b>${a.trust.toFixed(2)}</b></span>
+      <span>Load: <b>${a.load}%</b></span>
+      <span>HO rate: <b>${a.ho}%</b></span>
+    </div>`;
+}
+
+// ── Fault injection ───────────────────────────────────────────────────────
+async function injectFault() {
+  const atk = document.getElementById('atk-select').value;
+  const cellSel = parseInt(document.getElementById('cell-select').value);
+  const clean = agents.filter(a => a.status === 'healthy');
+  if (!clean.length) { alert('No healthy agents left!'); return; }
+  const target = cellSel >= 0 ? agents[cellSel] : clean[Math.floor(Math.random() * clean.length)];
+  if (target.status !== 'healthy') { alert(`Cell ${target.id} is already compromised!`); return; }
+
+  try {
+    await fetch(`${API}/inject?agent_id=${target.id}&attack_type=${atk}`, {method:'POST'});
+  } catch(e) {}
+
+  target.status = 'byzantine';
+  target.trust = 0.41;
+  applyHexStyle(target.id);
+  renderAllTrust();
+  updateOverviewMetrics();
+  addAlert('Byzantine', `Cell ${target.id} compromised — ${atk} attack`);
+  addAlert('Consensus', `Cell ${target.id} excluded from voting`);
+  showBanner(`⚠ Byzantine agent — Cell ${target.id} quarantined (${atk} attack)`);
+  document.getElementById('inject-status').innerHTML =
+    `<span style="color:var(--rust-lt)">⚠ Cell ${target.id} compromised · ${atk} attack · trust → 0.41 · excluded from consensus</span>`;
+}
+
+async function clearFaults() {
+  try { await fetch(`${API}/clear`, {method:'POST'}); } catch(e) {}
+  agents.forEach(a => { if (a.status !== 'handover') { a.status='healthy'; a.trust=1.0; } applyHexStyle(a.id); });
+  renderAllTrust();
+  updateOverviewMetrics();
+  hideBanner();
+  addAlert('Recovered','All faults cleared — agents restored');
+  document.getElementById('inject-status').textContent = 'No faults injected — system clean';
+  document.getElementById('cell-info').innerHTML =
+    '<div class="cell-info-title">All faults cleared</div><div class="cell-info-row"><span style="color:var(--sage-lt)">All 7 agents restored ✓</span></div>';
+}
+
+function simHandover() {
+  agents.forEach(a => { if (a.status === 'healthy') { a.status='handover'; applyHexStyle(a.id); } });
+  addAlert('System','Handover event — UEs switching between cells');
+  setTimeout(() => {
+    agents.forEach(a => { if (a.status === 'handover') { a.status='healthy'; applyHexStyle(a.id); } });
+    addAlert('System','Handover complete');
+  }, 2200);
+}
+
+async function startSim() {
+  try {
+    const r = await fetch(`${API}/start-sim`, {method:'POST'});
+    const d = await r.json();
+    document.getElementById('sim-status-pill').textContent = d.ok ? 'Simulation running...' : d.msg;
+    document.getElementById('sim-status-pill').style.color = d.ok ? 'var(--sage-lt)' : 'var(--rust-lt)';
+  } catch(e) {
+    document.getElementById('sim-status-pill').textContent = 'API not reachable';
+  }
+}
+
+// ── Overview metrics ──────────────────────────────────────────────────────
+function updateOverviewMetrics() {
+  const byz = agents.filter(a => a.status === 'byzantine').length;
+  const rate = Math.max(30, 72 - byz * 8);
+  document.getElementById('ov-consensus').textContent = rate + '%';
+  document.getElementById('ov-consensus-sub').textContent = byz > 0
+    ? `${byz} agent${byz>1?'s':''} quarantined`
+    : '↑ from 6.6% in the shared baseline';
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────
+function addAlert(type, msg) {
+  const cls = {Byzantine:'badge-danger',Policy:'badge-warn',Consensus:'badge-sand',System:'badge-ok',Recovered:'badge-ok'}[type]||'badge-sand';
+  const el = document.getElementById('ov-alerts');
+  el.insertAdjacentHTML('afterbegin', `
+    <div class="alert-item">
+      <span class="badge ${cls}">${type}</span>
+      <div><div class="alert-text">${msg}</div><div class="alert-time">Just now</div></div>
+    </div>`);
+  while (el.children.length > 5) el.removeChild(el.lastChild);
+}
+
+function showBanner(msg) {
+  document.getElementById('alert-text').textContent = msg;
+  document.getElementById('alert-banner').classList.add('visible');
+}
+function hideBanner() { document.getElementById('alert-banner').classList.remove('visible'); }
+
+// ── Consensus log ─────────────────────────────────────────────────────────
+function renderConsensusLog(log) {
+  const el = document.getElementById('sec-consensus-log');
+  if (!log || !log.length) return;
+  el.innerHTML = log.map(e => `
+    <div class="cons-row">
+      <span class="cons-step">Step ${e.step}</span>
+      <span class="badge ${e.ok?'badge-ok':'badge-warn'}">${e.ok?'✓':'✗'} ${e.agreement}%</span>
+      <span class="cons-detail">action=${e.final_action ?? '—'} · excluded: ${e.excluded?.length ? e.excluded.join(',') : 'none'}</span>
+    </div>`).join('');
+}
+
+// ── Poll /state every 2s ──────────────────────────────────────────────────
+async function pollState() {
+  try {
+    const r = await fetch(`${API}/state`);
+    const data = await r.json();
+    document.getElementById('sys-status').textContent = 'System online';
+
+    // update agents from backend
+    if (data.agents) {
+      data.agents.forEach((ag, i) => {
+        agents[i].trust = ag.trust;
+        agents[i].status = ag.status;
+        applyHexStyle(i);
+      });
+      renderAllTrust();
+      updateOverviewMetrics();
+    }
+
+    if (data.consensus_rate !== undefined) {
+      document.getElementById('ov-consensus').textContent = Math.round(data.consensus_rate * 100) + '%';
+    }
+
+    if (data.alerts && data.alerts.length) {
+      const el = document.getElementById('ov-alerts');
+      el.innerHTML = data.alerts.slice(0,5).map(a => `
+        <div class="alert-item">
+          <span class="badge ${a.type==='Byzantine'?'badge-danger':a.type==='Recovered'?'badge-ok':'badge-sand'}">${a.type}</span>
+          <div><div class="alert-text">${a.msg}</div><div class="alert-time">${a.time}</div></div>
+        </div>`).join('');
+    }
+
+    if (data.consensus_log) renderConsensusLog(data.consensus_log);
+
+    if (data.running) {
+      document.getElementById('sim-status-pill').textContent = `Running — step ${data.step}`;
+    } else if (data.step > 0) {
+      document.getElementById('sim-status-pill').textContent = `Complete — ${data.step} steps`;
+    }
+
+  } catch(e) {
+    document.getElementById('sys-status').textContent = 'API offline';
+  }
+}
+
+// ── Data Exploration ──────────────────────────────────────────────────────
+async function loadDataExploration() {
+  try {
+    const r = await fetch(`${API}/telemetry-stats`);
+    const d = await r.json();
+    dataLoaded = true;
+
+    const darkLayout = {
+      paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+      font:{color:'#A89880'}, margin:{t:40,b:40,l:50,r:20},
+    };
+
+    // RSRP histogram
+    if (d.rsrp) {
+      const edges = d.rsrp.edges;
+      const x = edges.slice(0,-1).map((v,i)=>((v+edges[i+1])/2).toFixed(1));
+      Plotly.newPlot('rsrp-chart', [{type:'bar',x,y:d.rsrp.counts,marker:{color:'#C9933A'},name:'RSRP'}],
+        {...darkLayout, title:{text:'RSRP Distribution (dBm)',font:{color:'#EDE0C8'}}, xaxis:{title:'dBm',color:'#A89880'}, yaxis:{color:'#A89880'}});
+    }
+
+    // SINR histogram
+    if (d.sinr) {
+      const edges = d.sinr.edges;
+      const x = edges.slice(0,-1).map((v,i)=>((v+edges[i+1])/2).toFixed(1));
+      Plotly.newPlot('sinr-chart', [{type:'bar',x,y:d.sinr.counts,marker:{color:'#7A9E7E'},name:'SINR'}],
+        {...darkLayout, title:{text:'SINR Distribution (dB)',font:{color:'#EDE0C8'}}, xaxis:{title:'dB',color:'#A89880'}, yaxis:{color:'#A89880'}});
+    }
+
+    // Correlation heatmap
+    if (d.correlation) {
+      const cols = Object.keys(d.correlation);
+      const z = cols.map(r => cols.map(c => d.correlation[r][c] ?? 0));
+      Plotly.newPlot('corr-chart',
+        [{type:'heatmap',z,x:cols,y:cols,colorscale:'RdBu',zmid:0,text:z.map(r=>r.map(v=>v.toFixed(2))),texttemplate:'%{text}'}],
+        {...darkLayout, title:{text:'Feature Correlation Heatmap',font:{color:'#EDE0C8'}}});
+    }
+
+    // CDF
+    if (d.cdf) {
+      Plotly.newPlot('cdf-chart',
+        [{x:d.cdf.x, y:d.cdf.y, mode:'lines', line:{color:'#C9933A',width:2}, name:'latency_ms'}],
+        {...darkLayout, title:{text:'CDF — Latency (ms)',font:{color:'#EDE0C8'}}, xaxis:{title:'ms',color:'#A89880'}, yaxis:{title:'CDF',color:'#A89880'}});
+    }
+
+    // SINR by scenario
+    if (d.sinr_by_scenario) {
+      const scenarios = Object.keys(d.sinr_by_scenario);
+      const values = scenarios.map(s => d.sinr_by_scenario[s]);
+      Plotly.newPlot('sinr-scenario-chart',
+        [{type:'bar', x:scenarios, y:values, marker:{color:'#7A9E7E'}, name:'Median SINR'}],
+        {...darkLayout, title:{text:'SINR by Scenario (median)',font:{color:'#EDE0C8'}}, xaxis:{color:'#A89880'}, yaxis:{title:'dB',color:'#A89880'}});
+    }
+
+    // Scenario donut
+    if (d.scenario_distribution) {
+      const labels = Object.keys(d.scenario_distribution);
+      const values = labels.map(l => d.scenario_distribution[l]);
+      Plotly.newPlot('ov-scenario-chart',
+        [{type:'pie', labels, values, hole:0.4, marker:{colors:['#C9933A','#7A9E7E','#B85C38','#8B6914','#D4B896','#A89880']}}],
+        {...darkLayout, margin:{t:10,b:10,l:10,r:10}, showlegend:true, legend:{font:{color:'#A89880'},orientation:'v'}});
+    }
+
+  } catch(e) {
+    console.error('Data exploration load error:', e);
+  }
+}
+
+// ── Agent Metrics ─────────────────────────────────────────────────────────
+async function loadAgentMetrics() {
+  if (Object.keys(agentMetrics).length) { renderAgentSummary(); return; }
+  try {
+    const r = await fetch(`${API}/agent-metrics`);
+    const d = await r.json();
+    agentMetrics = d.agents || {};
+
+    const sel = document.getElementById('agent-select');
+    Object.keys(agentMetrics).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name.replace('_agent','').replace('_',' ');
+      sel.appendChild(opt);
+    });
+    sel.value = Object.keys(agentMetrics)[0];
+    renderAgentDetail();
+    renderAgentSummary();
+    renderTrainVal();
+  } catch(e) { console.error(e); }
+}
+
+function getKey(ag) { return ag.task === 'classification' ? 'f1' : 'r2'; }
+function scoreColor(v) { return v >= 0.85 ? 'score-good' : v >= 0.5 ? 'score-mid' : 'score-bad'; }
+
+function renderAgentDetail() {
+  const name = document.getElementById('agent-select').value;
+  if (!name || !agentMetrics[name]) return;
+  const ag = agentMetrics[name];
+  const key = getKey(ag);
+  document.getElementById('ag-train').textContent = (ag.train[key]||0).toFixed(3);
+  document.getElementById('ag-val').textContent   = (ag.val[key]||0).toFixed(3);
+  document.getElementById('ag-test').textContent  = (ag.test[key]||0).toFixed(3);
+
+  const darkLayout = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#A89880'},margin:{t:40,b:40,l:50,r:20}};
+  Plotly.newPlot('agent-bar-chart',
+    [{type:'bar', x:['Train','Validation','Test'], y:[ag.train[key]||0, ag.val[key]||0, ag.test[key]||0],
+      marker:{color:['#C9933A','#7A9E7E','#B85C38']}, text:[(ag.train[key]||0).toFixed(3),(ag.val[key]||0).toFixed(3),(ag.test[key]||0).toFixed(3)], textposition:'outside'}],
+    {...darkLayout, title:{text:`${name} — ${key.toUpperCase()} across splits`,font:{color:'#EDE0C8'}},
+      yaxis:{range:[0,1.1],color:'#A89880'}, xaxis:{color:'#A89880'}});
+}
+
+function renderAgentSummary() {
+  const table = document.getElementById('agent-summary-table');
+  table.innerHTML = `<tr><th>Agent</th><th>Model</th><th>Task</th><th>Train</th><th>Val</th><th>Test</th></tr>` +
+    Object.entries(agentMetrics).map(([name, ag]) => {
+      const key = getKey(ag);
+      const tr = ag.train[key]||0, vl = ag.val[key]||0, te = ag.test[key]||0;
+      return `<tr>
+        <td style="color:var(--cream);font-weight:600">${name.replace('_agent','')}</td>
+        <td style="color:var(--text-dim)">${ag.model_type}</td>
+        <td style="color:var(--text-dim)">${ag.task}</td>
+        <td class="${scoreColor(tr)}">${tr.toFixed(3)}</td>
+        <td class="${scoreColor(vl)}">${vl.toFixed(3)}</td>
+        <td class="${scoreColor(te)}">${te.toFixed(3)} ${key.toUpperCase()}</td>
+      </tr>`;
+    }).join('');
+}
+
+function renderTrainVal() {
+  const names = Object.keys(agentMetrics).map(n=>n.replace('_agent',''));
+  const keys  = Object.values(agentMetrics).map(ag=>getKey(ag));
+  const darkLayout = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#A89880'},margin:{t:50,b:80,l:50,r:20}};
+  const traces = ['train','val','test'].map((split,i) => ({
+    type:'bar', name:split.charAt(0).toUpperCase()+split.slice(1),
+    x:names,
+    y:Object.values(agentMetrics).map(ag=>ag[split][getKey(ag)]||0),
+    marker:{color:['#C9933A','#7A9E7E','#B85C38'][i]},
+  }));
+  Plotly.newPlot('trainval-chart', traces,
+    {...darkLayout, barmode:'group', title:{text:'All Agents — Train / Val / Test',font:{color:'#EDE0C8'}},
+      yaxis:{range:[-0.1,1.1],color:'#A89880'}, xaxis:{color:'#A89880'}});
+
+  const table = document.getElementById('model-details-table');
+  table.innerHTML = `<tr><th>Agent</th><th>Model</th><th>Task</th><th>Test score</th></tr>` +
+    Object.entries(agentMetrics).map(([name,ag]) => {
+      const key = getKey(ag);
+      const te = ag.test[key]||0;
+      return `<tr>
+        <td style="color:var(--cream);font-weight:600">${name.replace('_agent','')}</td>
+        <td style="color:var(--text-dim)">${ag.model_type}</td>
+        <td style="color:var(--text-dim)">${ag.task}</td>
+        <td class="${scoreColor(te)}">${te.toFixed(3)} ${key.toUpperCase()}</td>
+      </tr>`;
+    }).join('');
+}
+
+// ── MARL Training ─────────────────────────────────────────────────────────
+async function loadMarlTraining() {
+  try {
+    const r = await fetch(`${API}/training-log`);
+    const d = await r.json();
+    if (!d.episodes || !d.episodes.length) return;
+
+    const darkLayout = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#A89880'},margin:{t:50,b:50,l:60,r:20}};
+
+    Plotly.newPlot('reward-chart',
+      [{x:d.episodes, y:d.rewards, mode:'lines', line:{color:'#C9933A',width:2}, name:'Total reward'},
+       {x:d.episodes, y:d.rewards.map((_,i,a) => {
+         const w=50, s=Math.max(0,i-w), slice=a.slice(s,i+1);
+         return slice.reduce((a,b)=>a+b,0)/slice.length;
+       }), mode:'lines', line:{color:'#F0C97A',width:2,dash:'dot'}, name:'50-ep moving avg'}],
+      {...darkLayout, title:{text:'MAPPO Reward over 1000 Episodes',font:{color:'#EDE0C8'}},
+        xaxis:{title:'Episode',color:'#A89880'}, yaxis:{title:'Total reward',color:'#A89880'}});
+
+    Plotly.newPlot('loss-chart',
+      [{x:d.episodes, y:d.actor_loss, mode:'lines', line:{color:'#7A9E7E',width:1.5}, name:'Actor loss'},
+       {x:d.episodes, y:d.critic_loss, mode:'lines', line:{color:'#B85C38',width:1.5}, name:'Critic loss', yaxis:'y2'}],
+      {...darkLayout, title:{text:'Actor & Critic Loss',font:{color:'#EDE0C8'}},
+        xaxis:{title:'Episode',color:'#A89880'},
+        yaxis:{title:'Actor loss',color:'#7A9E7E'},
+        yaxis2:{title:'Critic loss',color:'#B85C38',overlaying:'y',side:'right'}});
+
+  } catch(e) { console.error(e); }
+}
+
+// ── Chatbot ───────────────────────────────────────────────────────────────
+const chatResponses = {
+  'byzantine':'A Byzantine agent is a compromised node sending malicious actions to manipulate consensus. Our system detects it using three methods: statistical outlier detection, voting disagreement tracking, and behavioral drift analysis across a sliding window.',
+  'consensus':'Our consensus engine uses Byzantine-robust voting — it excludes flagged agents before tallying votes. Minimum agreement threshold is 60%. In the shared baseline, consensus accept rate is only 6.6%. Our MARL system reaches ~72%.',
+  'trust':'Trust scores range from 0 to 1. They drop when an agent is flagged by the anomaly detector or violates policy checks, and slowly recover when the agent behaves consistently with the group.',
+  'handover':'A handover is when a UE switches from one cell to another. Our MARL agents learn when to trigger handovers based on RSRP and SINR. The consensus engine ensures no single compromised agent can force a bad handover decision.',
+  'oran':'O-RAN is the open architecture this system runs in. Our agents live at the Near-RT RIC layer — making millisecond-to-second decisions pushed down to the O-DU and O-CU.',
+  'exp 3':'Experiment 3 added Byzantine injection and security modules to MARL training. The security layer correctly slows convergence by throttling learning signal during quarantine. Reward went from -2,520 → -259 over 1000 episodes. Given 2000-3000 episodes it will likely close the gap.',
+  'rsrp':'RSRP (Reference Signal Received Power) measures the signal strength from the serving cell. In the Nokia dataset, RSRP values range from around -125 to -60 dBm, with the distribution centered around -90 dBm.',
+  'sinr':'SINR (Signal to Interference and Noise Ratio) measures signal quality. Values above 10 dB are generally good. The dataset shows SINR drops sharply during jamming attacks — the clearest attack signature in the data.',
+  'default':'Based on the RAN knowledge corpus — this relates to how the multi-agent framework coordinates decisions across cells while maintaining security against adversarial agents. Try asking about Byzantine attacks, consensus, trust scores, or O-RAN architecture.',
+};
+
+function sendChat() {
+  const inp = document.getElementById('chat-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  const msgs = document.getElementById('chat-msgs');
+  msgs.insertAdjacentHTML('beforeend', `<div class="chat-msg chat-user">${msg}</div>`);
+  inp.value = '';
+  setTimeout(() => {
+    const lower = msg.toLowerCase();
+    let reply = chatResponses.default;
+    for (const [k, v] of Object.entries(chatResponses)) {
+      if (lower.includes(k)) { reply = v; break; }
+    }
+    msgs.insertAdjacentHTML('beforeend', `<div class="chat-msg chat-bot">${reply}</div>`);
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 500);
+}
+
+function askSuggested(btn) {
+  document.getElementById('chat-input').value = btn.textContent;
+  sendChat();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+// Render hex styles and trust on load
+agents.forEach((_,i) => applyHexStyle(i));
+renderAllTrust();
+updateOverviewMetrics();
+loadDataExploration();
+
+// Poll state every 2s
+pollState();
+setInterval(pollState, 2000);
+</script>
+</body>
+</html>
