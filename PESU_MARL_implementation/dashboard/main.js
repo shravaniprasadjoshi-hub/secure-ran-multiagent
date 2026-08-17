@@ -26,15 +26,47 @@ function showTab(name, btn) {
 }
 
 // Colours
-function tColor(t) {
-  if (t >= 0.7) return '#7A9E7E';
-  if (t >= 0.4) return '#C9933A';
-  return '#B85C38';
+function cssVar(name) {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
 }
-const fills   = {healthy:'url(#gg)',handover:'url(#go)',degraded:'url(#gd)',byzantine:'url(#gr)'};
-const filters = {healthy:'url(#fg)',handover:'url(#fo)',degraded:'url(#fo)',byzantine:'url(#fr)'};
-const sLabels = {healthy:'Healthy',handover:'Handover active',degraded:'Degraded',byzantine:'Byzantine — quarantined'};
-const sColors = {healthy:'#7A9E7E',handover:'#C9933A',degraded:'#8B6914',byzantine:'#B85C38'};
+
+function tColor(t) {
+  if (t >= 0.7) return cssVar('--sage');
+  if (t >= 0.4) return cssVar('--gold');
+  return cssVar('--rust');
+}
+
+const fills = {
+  healthy:'url(#gg)',
+  handover:'url(#go)',
+  degraded:'url(#gd)',
+  byzantine:'url(#gr)'
+};
+
+const filters = {
+  healthy:'url(#fg)',
+  handover:'url(#fo)',
+  degraded:'url(#fo)',
+  byzantine:'url(#fr)'
+};
+
+const sLabels = {
+  healthy:'Healthy',
+  handover:'Handover active',
+  degraded:'Degraded',
+  byzantine:'Byzantine — quarantined'
+};
+
+function getStatusColor(status) {
+  return {
+    healthy: cssVar('--sage'),
+    handover: cssVar('--gold'),
+    degraded: cssVar('--orange'),
+    byzantine: cssVar('--rust')
+  }[status] || cssVar('--text-dim');
+}
 
 // Trust rendering
 function renderTrust(containerId) {
@@ -81,7 +113,7 @@ function pickHex(g) {
   document.getElementById('cell-info').innerHTML = `
     <div class="cell-info-title">${g.dataset.name}</div>
     <div class="cell-info-row">
-      <span>Status: <b style="color:${sColors[a.status]}">${sLabels[a.status]}</b></span>
+      <span>Status: <b style="color:${getStatusColor(a.status)}">${sLabels[a.status]}</b></span>
       <span>Trust: <b>${a.trust.toFixed(2)}</b></span>
       <span>Load: <b>${a.load}%</b></span>
       <span>HO rate: <b>${a.ho}%</b></span>
@@ -236,25 +268,31 @@ async function loadDataExploration() {
     const d = await r.json();
     dataLoaded = true;
 
+    const pt = getPlotlyTheme();
+
     const darkLayout = {
-      paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-      font:{color:'#A89880'}, margin:{t:40,b:40,l:50,r:20},
+      paper_bgcolor:'rgba(0,0,0,0)',
+      plot_bgcolor:'rgba(0,0,0,0)',
+      font:{color:pt.text},
+      margin:{t:40,b:40,l:50,r:20},
+      xaxis:{color:pt.text, gridcolor:pt.grid},
+      yaxis:{color:pt.text, gridcolor:pt.grid}
     };
 
     // RSRP histogram
     if (d.rsrp) {
       const edges = d.rsrp.edges;
       const x = edges.slice(0,-1).map((v,i)=>((v+edges[i+1])/2).toFixed(1));
-      Plotly.newPlot('rsrp-chart', [{type:'bar',x,y:d.rsrp.counts,marker:{color:'#C9933A'},name:'RSRP'}],
-        {...darkLayout, title:{text:'RSRP Distribution (dBm)',font:{color:'#EDE0C8'}}, xaxis:{title:'dBm',color:'#A89880'}, yaxis:{color:'#A89880'}});
+      Plotly.newPlot('rsrp-chart', [{type:'bar',x,y:d.rsrp.counts,marker:{color:pt.teal},name:'RSRP'}],
+        {...darkLayout, title:{text:'RSRP Distribution (dBm)',font:{color:pt.title}}, xaxis:{title:'dBm',color:'#A89880'}, yaxis:{color:'#A89880'}});
     }
 
     // SINR histogram
     if (d.sinr) {
       const edges = d.sinr.edges;
       const x = edges.slice(0,-1).map((v,i)=>((v+edges[i+1])/2).toFixed(1));
-      Plotly.newPlot('sinr-chart', [{type:'bar',x,y:d.sinr.counts,marker:{color:'#7A9E7E'},name:'SINR'}],
-        {...darkLayout, title:{text:'SINR Distribution (dB)',font:{color:'#EDE0C8'}}, xaxis:{title:'dB',color:'#A89880'}, yaxis:{color:'#A89880'}});
+      Plotly.newPlot('sinr-chart', [{type:'bar',x,y:d.sinr.counts,marker:{color:pt.blue},name:'SINR'}],
+        {...darkLayout, title:{text:'SINR Distribution (dB)',font:{color:pt.title}}, xaxis:{title:'dB',color:'#A89880'}, yaxis:{color:'#A89880'}});
     }
 
     // Correlation heatmap
@@ -269,7 +307,7 @@ async function loadDataExploration() {
     // CDF
     if (d.cdf) {
       Plotly.newPlot('cdf-chart',
-        [{x:d.cdf.x, y:d.cdf.y, mode:'lines', line:{color:'#C9933A',width:2}, name:'latency_ms'}],
+        [{x:d.cdf.x, y:d.cdf.y, mode:'lines', line:{color:pt.teal,width:2}, name:'latency_ms'}],
         {...darkLayout, title:{text:'CDF — Latency (ms)',font:{color:'#EDE0C8'}}, xaxis:{title:'ms',color:'#A89880'}, yaxis:{title:'CDF',color:'#A89880'}});
     }
 
@@ -287,8 +325,8 @@ async function loadDataExploration() {
       const labels = Object.keys(d.scenario_distribution);
       const values = labels.map(l => d.scenario_distribution[l]);
       Plotly.newPlot('ov-scenario-chart',
-        [{type:'pie', labels, values, hole:0.4, marker:{colors:['#C9933A','#7A9E7E','#B85C38','#8B6914','#D4B896','#A89880']}}],
-        {...darkLayout, margin:{t:10,b:10,l:10,r:10}, showlegend:true, legend:{font:{color:'#A89880'},orientation:'v'}});
+        [{type:'pie', labels, values, hole:0.4, marker:{ colors:[ pt.teal, pt.blue, pt.rust, pt.orange, pt.gold, pt.text ]}}],
+        {...darkLayout, margin:{t:10,b:10,l:10,r:10}, showlegend:true, legend:{font:{color:pt.text},orientation:'v'}});
     }
 
   } catch(e) {
@@ -329,11 +367,13 @@ function renderAgentDetail() {
   document.getElementById('ag-val').textContent   = (ag.val[key]||0).toFixed(3);
   document.getElementById('ag-test').textContent  = (ag.test[key]||0).toFixed(3);
 
-  const darkLayout = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#A89880'},margin:{t:40,b:40,l:50,r:20}};
+  const pt = getPlotlyTheme();
+
+  const darkLayout = { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:pt.text}, margin:{t:40,b:40,l:50,r:20}, xaxis:{color:pt.text,gridcolor:pt.grid}, yaxis:{color:pt.text,gridcolor:pt.grid} };
   Plotly.newPlot('agent-bar-chart',
     [{type:'bar', x:['Train','Validation','Test'], y:[ag.train[key]||0, ag.val[key]||0, ag.test[key]||0],
-      marker:{color:['#C9933A','#7A9E7E','#B85C38']}, text:[(ag.train[key]||0).toFixed(3),(ag.val[key]||0).toFixed(3),(ag.test[key]||0).toFixed(3)], textposition:'outside'}],
-    {...darkLayout, title:{text:`${name} — ${key.toUpperCase()} across splits`,font:{color:'#EDE0C8'}},
+      marker:{color:[pt.teal,pt.sage,pt.rust]}, text:[(ag.train[key]||0).toFixed(3),(ag.val[key]||0).toFixed(3),(ag.test[key]||0).toFixed(3)], textposition:'outside'}],
+    {...darkLayout, title:{text:`${name} — ${key.toUpperCase()} across splits`,font:{color:pt.title}},
       yaxis:{range:[0,1.1],color:'#A89880'}, xaxis:{color:'#A89880'}});
 }
 
@@ -356,12 +396,13 @@ function renderAgentSummary() {
 
 function renderTrainVal() {
   const names = Object.keys(agentMetrics).map(n=>n.replace('_agent',''));
-  const darkLayout = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#A89880'},margin:{t:50,b:80,l:50,r:20}};
+  const pt = getPlotlyTheme();
+  const darkLayout = { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:pt.title}, margin:{t:50,b:80,l:50,r:20}, xaxis:{color:pt.text,gridcolor:pt.grid}, yaxis:{color:pt.text,gridcolor:pt.grid} };
   const traces = ['train','val','test'].map((split,i) => ({
     type:'bar', name:split.charAt(0).toUpperCase()+split.slice(1),
     x:names,
     y:Object.values(agentMetrics).map(ag=>ag[split][getKey(ag)]||0),
-    marker:{color:['#C9933A','#7A9E7E','#B85C38'][i]},
+    marker:{color:[pt.teal,pt.sage,pt.rust][i]},
   }));
   Plotly.newPlot('trainval-chart', traces,
     {...darkLayout, barmode:'group', title:{text:'All Agents — Train / Val / Test',font:{color:'#EDE0C8'}},
@@ -388,24 +429,25 @@ async function loadMarlTraining() {
     const d = await r.json();
     if (!d.episodes || !d.episodes.length) return;
 
-    const darkLayout = {paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#A89880'},margin:{t:50,b:50,l:60,r:20}};
+    const pt = getPlotlyTheme();
+    const darkLayout = { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:pt.text}, margin:{t:50,b:50,l:60,r:20}, xaxis:{color:pt.text,gridcolor:pt.grid}, yaxis:{color:pt.text,gridcolor:pt.grid} };
 
     Plotly.newPlot('reward-chart',
-      [{x:d.episodes, y:d.rewards, mode:'lines', line:{color:'#C9933A',width:2}, name:'Total reward'},
+      [{x:d.episodes, y:d.rewards, mode:'lines', line:{color:pt.teal,width:2}, name:'Total reward'},
        {x:d.episodes, y:d.rewards.map((_,i,a) => {
          const w=50, s=Math.max(0,i-w), slice=a.slice(s,i+1);
          return slice.reduce((a,b)=>a+b,0)/slice.length;
-       }), mode:'lines', line:{color:'#F0C97A',width:2,dash:'dot'}, name:'50-ep moving avg'}],
+       }), mode:'lines', line:{color:pt.tealLight,width:2,dash:'dot'}, name:'50-ep moving avg'}],
       {...darkLayout, title:{text:'MAPPO Reward over 1000 Episodes',font:{color:'#EDE0C8'}},
         xaxis:{title:'Episode',color:'#A89880'}, yaxis:{title:'Total reward',color:'#A89880'}});
 
     Plotly.newPlot('loss-chart',
-      [{x:d.episodes, y:d.actor_loss, mode:'lines', line:{color:'#7A9E7E',width:1.5}, name:'Actor loss'},
-       {x:d.episodes, y:d.critic_loss, mode:'lines', line:{color:'#B85C38',width:1.5}, name:'Critic loss', yaxis:'y2'}],
+      [{x:d.episodes, y:d.actor_loss, mode:'lines', line:{color:pt.sage,width:1.5}, name:'Actor loss'},
+       {x:d.episodes, y:d.critic_loss, mode:'lines', line:{color:pt.rust,width:1.5}, name:'Critic loss', yaxis:'y2'}],
       {...darkLayout, title:{text:'Actor & Critic Loss',font:{color:'#EDE0C8'}},
         xaxis:{title:'Episode',color:'#A89880'},
-        yaxis:{title:'Actor loss',color:'#7A9E7E'},
-        yaxis2:{title:'Critic loss',color:'#B85C38',overlaying:'y',side:'right'}});
+        yaxis:{title:'Actor loss',color:pt.sage},
+        yaxis2:{title:'Critic loss',color:pt.rust,overlaying:'y',side:'right'}});
 
   } catch(e) { console.error(e); }
 }
@@ -446,7 +488,93 @@ function askSuggested(btn) {
   sendChat();
 }
 
+// Theme
+function updateThemeIcon() {
+  const isLight = document.documentElement.classList.contains('light');
+  const icon = document.getElementById('theme-icon');
+  const label = document.getElementById('theme-label');
+
+  if (icon) icon.textContent = isLight ? '☀' : '☾';
+  if (label) label.textContent = isLight ? 'Light' : 'Dark';
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  root.classList.toggle('light');
+
+  const theme = root.classList.contains('light') ? 'light' : 'dark';
+  localStorage.setItem('ran-theme', theme);
+
+  updateThemeIcon();
+  updatePlotlyTheme();
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('ran-theme');
+
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+  } else {
+    document.documentElement.classList.remove('light');
+  }
+
+  updateThemeIcon();
+}
+
+function getPlotlyTheme() {
+  const light = document.documentElement.classList.contains('light');
+
+  return {
+    text: light ? '#647777' : '#8FA5A8',
+    title: light ? '#172525' : '#E6F1F2',
+    grid: light ? 'rgba(100,119,119,0.15)' : 'rgba(143,165,168,0.12)',
+    teal: light ? '#159B8C' : '#35C6B0',
+    tealLight: light ? '#08796D' : '#75DDD0',
+    blue: light ? '#287BA8' : '#55A7D9',
+    gold: light ? '#C98B16' : '#E5B85C',
+    sage: light ? '#3C9A58' : '#63C174',
+    rust: light ? '#D05252' : '#E36A6A',
+    orange: light ? '#C96835' : '#E58A5C'
+  };
+}
+
+function updatePlotlyTheme() {
+  const ids = [
+    'rsrp-chart',
+    'sinr-chart',
+    'corr-chart',
+    'cdf-chart',
+    'sinr-scenario-chart',
+    'ov-scenario-chart',
+    'agent-bar-chart',
+    'trainval-chart',
+    'reward-chart',
+    'loss-chart'
+  ];
+
+  const theme = getPlotlyTheme();
+
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || !el.data) return;
+
+    Plotly.relayout(id, {
+      'font.color': theme.text,
+      'title.font.color': theme.title,
+      'xaxis.color': theme.text,
+      'yaxis.color': theme.text,
+      'xaxis.gridcolor': theme.grid,
+      'yaxis.gridcolor': theme.grid,
+      'legend.font.color': theme.text,
+      'paper_bgcolor': 'rgba(0,0,0,0)',
+      'plot_bgcolor': 'rgba(0,0,0,0)'
+    });
+  });
+}
+
 // Init
+initTheme();
+
 agents.forEach((_,i) => applyHexStyle(i));
 renderAllTrust();
 updateOverviewMetrics();

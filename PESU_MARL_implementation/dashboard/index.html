@@ -15,7 +15,16 @@
     <div class="nav-logo-icon">⬡</div>
     Secure RAN · NBUC
   </div>
-  <div class="status-pill"><div class="sdot"></div><span id="sys-status">Connecting...</span></div>
+  <div class="nav-actions">
+  <div class="status-pill">
+    <div class="sdot"></div>
+    <span id="sys-status">Connecting...</span>
+  </div>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light and dark mode">
+    <span class="theme-icon" id="theme-icon">☾</span>
+    <span id="theme-label">Dark</span>
+  </button>
+</div>
 </nav>
 
 <!-- ALERT BANNER -->
@@ -91,7 +100,7 @@
   <div class="page-title">Data Exploration</div>
   <div class="page-sub">Distributions, correlations and CDFs from the 70k Nokia telemetry dataset</div>
 
-  <div class="grid2" style="margin-bottom:16px">
+  <div style="margin-bottom:16px">
     <div class="plot-box"><div id="rsrp-chart" style="height:300px"></div></div>
     <div class="plot-box"><div id="sinr-chart" style="height:300px"></div></div>
   </div>
@@ -154,10 +163,10 @@
   <div class="twin-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
       <div class="legend">
-        <span><div class="ldot" style="background:#7A9E7E"></div>Healthy</span>
-        <span><div class="ldot" style="background:#C9933A"></div>Handover</span>
-        <span><div class="ldot" style="background:#8B6914"></div>Degraded</span>
-        <span><div class="ldot" style="background:#B85C38"></div>Byzantine</span>
+        <span><div class="ldot" style="background:#63C174"></div>Healthy</span>
+        <span><div class="ldot" style="background:#E5B85C"></div>Handover</span>
+        <span><div class="ldot" style="background:#E58A5C"></div>Degraded</span>
+        <span><div class="ldot" style="background:#E36A6A"></div>Byzantine</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <div id="sim-status-pill" style="font-size:12px;color:var(--text-dim);padding:4px 10px;border:1px solid var(--border);border-radius:20px">Simulation idle</div>
@@ -168,14 +177,50 @@
     <div class="svg-bg">
       <svg id="twin-svg" viewBox="0 0 480 330" style="width:100%;max-width:560px">
         <defs>
-          <filter id="fg" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <filter id="fr" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <filter id="fo" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9DC4A0"/><stop offset="100%" stop-color="#4A7A50"/></linearGradient>
-          <linearGradient id="go" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F0C97A"/><stop offset="100%" stop-color="#A07020"/></linearGradient>
-          <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E8906E"/><stop offset="100%" stop-color="#8B3820"/></linearGradient>
-          <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C4A45A"/><stop offset="100%" stop-color="#6B5010"/></linearGradient>
-        </defs>
+			<filter id="fg" x="-40%" y="-40%" width="180%" height="180%">
+				<feGaussianBlur stdDeviation="4" result="b"/>
+				<feMerge>
+				<feMergeNode in="b"/>
+				<feMergeNode in="SourceGraphic"/>
+				</feMerge>
+			</filter>
+
+			<filter id="fr" x="-40%" y="-40%" width="180%" height="180%">
+				<feGaussianBlur stdDeviation="6" result="b"/>
+				<feMerge>
+				<feMergeNode in="b"/>
+				<feMergeNode in="SourceGraphic"/>
+				</feMerge>
+			</filter>
+
+			<filter id="fo" x="-40%" y="-40%" width="180%" height="180%">
+				<feGaussianBlur stdDeviation="4" result="b"/>
+				<feMerge>
+				<feMergeNode in="b"/>
+				<feMergeNode in="SourceGraphic"/>
+				</feMerge>
+			</filter>
+
+			<linearGradient id="gg" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stop-color="#75DDD0"/>
+				<stop offset="100%" stop-color="#159B8C"/>
+			</linearGradient>
+
+			<linearGradient id="go" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stop-color="#F2D078"/>
+				<stop offset="100%" stop-color="#C98B16"/>
+			</linearGradient>
+
+			<linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stop-color="#F09A7A"/>
+				<stop offset="100%" stop-color="#D05252"/>
+			</linearGradient>
+
+			<linearGradient id="gd" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stop-color="#E5A875"/>
+				<stop offset="100%" stop-color="#C96835"/>
+			</linearGradient>
+		</defs>
         <line x1="240" y1="88" x2="155" y2="162" stroke="#6B5A38" stroke-width="1.5" stroke-dasharray="6,4"/>
         <line x1="240" y1="88" x2="325" y2="162" stroke="#6B5A38" stroke-width="1.5" stroke-dasharray="6,4"/>
         <line x1="155" y1="162" x2="90"  y2="242" stroke="#4A3C28" stroke-width="1.2" stroke-dasharray="5,4"/>
