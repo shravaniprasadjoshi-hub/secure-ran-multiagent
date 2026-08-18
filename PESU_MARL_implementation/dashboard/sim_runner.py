@@ -1,5 +1,6 @@
 """
-dashboard/sim_runner.py - background MAPPO eval-episode runner + shared live-sim state
+dashboard/sim_runner.py — background MAPPO eval-episode runner + shared live-sim state
+Extracted out of api.py so the sim/env logic isn't coupled to the HTTP layer.
 api.py imports `sim_state` and `run_eval_episode` from here.
 """
 from __future__ import annotations
@@ -12,7 +13,11 @@ import numpy as np
 
 # same layout convention as api.py
 PESU_DIR = Path(__file__).resolve().parent.parent
-CHECKPOINT_DIR = PESU_DIR / "results" / "checkpoints" / "final"
+
+# train.py -> training/outputs/checkpoints/final (MAPPO only)
+# train_secure.py -> training/outputs/checkpoints_secure/final (MAPPO + security)
+BASE_CHECKPOINT_DIR = PESU_DIR / "training" / "outputs" / "checkpoints" / "final"
+SECURE_CHECKPOINT_DIR = PESU_DIR / "training" / "outputs" / "checkpoints_secure" / "final"
 
 # Shared simulation state, polled by the frontend via GET /state
 sim_state: dict = {
@@ -30,14 +35,20 @@ sim_state: dict = {
 }
 
 
-def run_eval_episode():
+def run_eval_episode(use_secure: bool = True):
     """
     Loads trained MAPPO checkpoint and runs one eval episode.
     Updates sim_state every step so the frontend sees live trust/status changes.
     Imports are inside the function so the API can start even if torch isn't installed.
     Intended to be run in a background thread (see api.py: POST /start-sim).
+
+    use_secure: prefer training/outputs/checkpoints_secure/final (MAPPO + security)
+                falls back to training/outputs/checkpoints/final if secure doesn't
+                exist yet, and to an untrained/random policy if neither exists.
     """
     sys.path.insert(0, str(PESU_DIR))
+
+    checkpoint_dir = SECURE_CHECKPOINT_DIR if (use_secure and SECURE_CHECKPOINT_DIR.exists()) else BASE_CHECKPOINT_DIR
 
     try:
         from env.ran_env import RANEnv
@@ -56,8 +67,19 @@ def run_eval_episode():
         n_agents = len(agent_list)
 
         manager = AgentManager(num_agents=n_agents, obs_dim=3, action_dim=3)
-        if CHECKPOINT_DIR.exists():
-            manager.load_checkpoint(str(CHECKPOINT_DIR))
+        if checkpoint_dir.exists():
+            manager.load_checkpoint(str(checkpoint_dir))
+            sim_state["alerts"].insert(0, {
+                "type": "System",
+                "msg": f"Loaded checkpoint: {checkpoint_dir.relative_to(PESU_DIR)}",
+                "time": "Just now"
+            })
+        else:
+            sim_state["alerts"].insert(0, {
+                "type": "System",
+                "msg": "No checkpoint found — running with untrained/random policy",
+                "time": "Just now"
+            })
 
         # preserve any byzantine agents injected from the frontend before this run started
         injector = ByzantineFaultInjector(total_agents=n_agents)
