@@ -452,35 +452,73 @@ async function loadMarlTraining() {
   } catch(e) { console.error(e); }
 }
 
-// Chatbot
+// ── Chatbot ───────────────────────────────────────────────────────────────
 const chatResponses = {
-  'byzantine':'A Byzantine agent is a compromised node sending malicious actions to manipulate consensus. Our system detects it using three methods: statistical outlier detection, voting disagreement tracking, and behavioral drift analysis across a sliding window.',
-  'consensus':'Our consensus engine uses Byzantine-robust voting — it excludes flagged agents before tallying votes. Minimum agreement threshold is 60%. In the shared baseline, consensus accept rate is only 6.6%. Our MARL system reaches ~72%.',
-  'trust':'Trust scores range from 0 to 1. They drop when an agent is flagged by the anomaly detector or violates policy checks, and slowly recover when the agent behaves consistently with the group.',
-  'handover':'A handover is when a UE switches from one cell to another. Our MARL agents learn when to trigger handovers based on RSRP and SINR. The consensus engine ensures no single compromised agent can force a bad handover decision.',
-  'oran':'O-RAN is the open architecture this system runs in. Our agents live at the Near-RT RIC layer — making millisecond-to-second decisions pushed down to the O-DU and O-CU.',
-  'exp 3':'Experiment 3 added Byzantine injection and security modules to MARL training. The security layer correctly slows convergence by throttling learning signal during quarantine. Reward went from -2,520 → -259 over 1000 episodes. Given 2000-3000 episodes it will likely close the gap.',
-  'rsrp':'RSRP (Reference Signal Received Power) measures the signal strength from the serving cell. In the Nokia dataset, RSRP values range from around -125 to -60 dBm, with the distribution centered around -90 dBm.',
-  'sinr':'SINR (Signal to Interference and Noise Ratio) measures signal quality. Values above 10 dB are generally good. The dataset shows SINR drops sharply during jamming attacks — the clearest attack signature in the data.',
-  'default':'Based on the RAN knowledge corpus — this relates to how the multi-agent framework coordinates decisions across cells while maintaining security against adversarial agents. Try asking about Byzantine attacks, consensus, trust scores, or O-RAN architecture.',
+  'byzantine': 'A Byzantine agent is a compromised node sending malicious actions to manipulate consensus. Our system detects it using three methods: statistical outlier detection, voting disagreement tracking, and behavioral drift analysis across a sliding window.',
+  'consensus': 'Our consensus engine uses Byzantine-robust voting — it excludes flagged agents before tallying votes. Minimum agreement threshold is 60%. In the shared baseline, consensus accept rate is only 6.6%. Our MARL system reaches ~72%.',
+  'trust': 'Trust scores range from 0 to 1. They drop when an agent is flagged by the anomaly detector or violates policy checks, and slowly recover when the agent behaves consistently with the group.',
+  'handover': 'A handover is when a UE switches from one cell to another. Our MARL agents learn when to trigger handovers based on RSRP and SINR. The consensus engine ensures no single compromised agent can force a bad handover decision.',
+  'oran': 'O-RAN is the open architecture this system runs in. Our agents live at the Near-RT RIC layer — making millisecond-to-second decisions pushed down to the O-DU and O-CU.',
+  'exp 3': 'Experiment 3 added Byzantine injection and security modules to MARL training. The security layer correctly slows convergence by throttling learning signal during quarantine. Reward went from -2,520 to -259 over 1000 episodes. Given 2000-3000 episodes it will likely close the gap.',
+  'rsrp': 'RSRP (Reference Signal Received Power) measures the signal strength from the serving cell. Values range from around -125 to -60 dBm, with the distribution centered around -90 dBm.',
+  'sinr': 'SINR (Signal to Interference and Noise Ratio) measures signal quality. Values above 10 dB are generally good. SINR drops sharply during jamming attacks — the clearest attack signature in the data.',
+  'mappo': 'MAPPO — Multi-Agent Proximal Policy Optimization — uses centralized training with decentralized execution. During training, a shared critic sees all 7 agents\' observations globally. During execution, each agent acts independently using only its local observations. This gives coordinated behavior with fast local inference.',
+  'rrc': 'RRC — Radio Resource Control — manages the connection between UEs and the RAN. It controls handover decisions, access control, resource allocation, and mobility management. In 6G, our MAPPO agents replace traditional rule-based RRC controllers.',
+  'reward': 'Our reward function: successful handover = +10, healthy defer = +1, radio link failure = -10, ping-pong = -5. These incentives teach agents to trigger handovers when genuinely needed and avoid unnecessary switching.',
+  'pqc': 'PQC — Post-Quantum Cryptography — secures inter-agent communication so quantum computers cannot intercept agent messages during consensus. We plan to implement this using liboqs. This is Experiment 4, currently a stretch goal.',
+  'default': 'Based on the project knowledge base — this relates to our secure multi-agent AI framework for 6G RAN control. Try asking about Byzantine attacks, consensus mechanisms, trust scoring, MAPPO, RSRP, SINR, or O-RAN architecture.',
 };
 
-function sendChat() {
+async function sendChat() {
   const inp = document.getElementById('chat-input');
   const msg = inp.value.trim();
   if (!msg) return;
+
   const msgs = document.getElementById('chat-msgs');
-  msgs.insertAdjacentHTML('beforeend', `<div class="chat-msg chat-user">${msg}</div>`);
+  msgs.insertAdjacentHTML('beforeend',
+    `<div class="chat-msg chat-user">${msg}</div>`);
   inp.value = '';
-  setTimeout(() => {
+
+  // Typing indicator
+  const typingId = 'typing-' + Date.now();
+  msgs.insertAdjacentHTML('beforeend',
+    `<div class="chat-msg chat-bot" id="${typingId}" style="color:var(--text-dim);font-style:italic">Searching knowledge base...</div>`);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const r = await fetch(`${API}/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: msg})
+    });
+    const data = await r.json();
+    document.getElementById(typingId)?.remove();
+
+    // Source citation if RAG returned a real match
+    let sourceNote = '';
+    if (data.rag_available && data.sources && data.sources.length) {
+      const src = data.sources[0];
+      sourceNote = `<div style="font-size:11px;color:var(--text-dim);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+        📄 ${src.title} · <span style="color:var(--teal, #00D4AA)">${src.source}</span>
+      </div>`;
+    }
+
+    msgs.insertAdjacentHTML('beforeend',
+      `<div class="chat-msg chat-bot">${data.answer}${sourceNote}</div>`);
+
+  } catch(e) {
+    // API offline — silent fallback to hardcoded responses
+    document.getElementById(typingId)?.remove();
     const lower = msg.toLowerCase();
-    let reply = chatResponses.default;
+    let reply = chatResponses['default'];
     for (const [k, v] of Object.entries(chatResponses)) {
       if (lower.includes(k)) { reply = v; break; }
     }
-    msgs.insertAdjacentHTML('beforeend', `<div class="chat-msg chat-bot">${reply}</div>`);
-    msgs.scrollTop = msgs.scrollHeight;
-  }, 500);
+    msgs.insertAdjacentHTML('beforeend',
+      `<div class="chat-msg chat-bot">${reply}<div style="font-size:11px;color:var(--text-dim);margin-top:6px">⚠ API offline — using cached responses</div></div>`);
+  }
+
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
 function askSuggested(btn) {

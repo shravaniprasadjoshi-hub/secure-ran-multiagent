@@ -44,15 +44,14 @@ class RAGChatbot:
             )
         top = sources[0]
         q = question.lower()
-        intro = f"Based on **{top['source']}** ({top['category']}):\n\n"
         if "consensus" in q:
-            return intro + "Consensus uses Byzantine Fault Tolerance with weighted trust voting. Decisions require >70% agreement, trust >0.8, and confidence >0.85. " + top["content"][:400]
+            return top["content"][:400]
         if "agent" in q or "mobility" in q:
-            return intro + top["content"][:500]
+            return top["content"][:500]
         if "3gpp" in q or "rrc" in q or "rsrp" in q:
-            return intro + top["content"][:500]
+            return top["content"][:500]
         if "security" in q or "attack" in q or "jamming" in q:
-            return intro + top["content"][:500]
+            return top["content"][:500]
         if "digital twin" in q or "simulation" in q:
-            return intro + "The digital twin simulates 48 cells across 12 gNBs with real-time KPI drift, attack injection, and agent mitigation. " + top["content"][:300]
-        return intro + top["content"][:500]
+            return "The digital twin simulates 48 cells across 12 gNBs with real-time KPI drift, attack injection, and agent mitigation. " + top["content"][:300]
+        return top["content"][:500]
