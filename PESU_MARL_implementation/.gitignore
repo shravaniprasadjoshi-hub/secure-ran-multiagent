@@ -6,3 +6,4 @@ results/logs/
 !outputs/
 training/outputs/checkpoints/
 training/outputs/checkpoints_secure/
+liboqs/

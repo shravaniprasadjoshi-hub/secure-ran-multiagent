@@ -9,3 +9,5 @@ matplotlib
 seaborn
 tqdm
 pettingzoo
+liboqs-python
+cryptography
