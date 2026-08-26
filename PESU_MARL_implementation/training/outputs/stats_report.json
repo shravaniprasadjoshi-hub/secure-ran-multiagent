@@ -1,0 +1,206 @@
+[
+  {
+    "file": "training/outputs/train_log.csv",
+    "n_episodes": 1000,
+    "total_reward_trend": {
+      "slope": 0.4475425955425955,
+      "r_squared": 0.19044879172653248,
+      "p_value": 9.429058194923083e-48,
+      "intercept": 1417.5089309309308
+    },
+    "total_reward_tail_dist": {
+      "mean": 1789.21,
+      "std": 137.37218448691522,
+      "median": 1787.0,
+      "iqr": 202.5,
+      "skew": 0.09015156151182686,
+      "kurtosis": -0.5672773095708852,
+      "min": 1466.0,
+      "max": 2138.0
+    },
+    "actor_loss_trend": {
+      "slope": 1.453935542191073e-06,
+      "r_squared": 0.08814971551280282,
+      "p_value": 8.455102804443072e-22,
+      "intercept": -0.004241074776109855
+    },
+    "actor_loss_tail_dist": {
+      "mean": -0.003068889667023592,
+      "std": 0.00033652127888969866,
+      "median": -0.0030631954923266997,
+      "iqr": 0.00040383672047387487,
+      "skew": -0.14205822583499508,
+      "kurtosis": 0.0657325673453868,
+      "min": -0.0038912888907621,
+      "max": -0.002135036190631
+    },
+    "critic_loss_trend": {
+      "slope": 0.00034036164593415465,
+      "r_squared": 2.987766619666326e-06,
+      "p_value": 0.9564633987476745,
+      "intercept": 377.3436651552676
+    },
+    "critic_loss_tail_dist": {
+      "mean": 376.31211242675784,
+      "std": 47.76555189780933,
+      "median": 371.3052978515625,
+      "iqr": 73.64136505126953,
+      "skew": 0.3897019012711244,
+      "kurtosis": -0.3946079005356151,
+      "min": 284.37628173828125,
+      "max": 498.1084289550781
+    },
+    "convergence_episode": 147,
+    "correlations": {
+      "total_reward": {
+        "total_reward": 1.0,
+        "actor_loss": 0.798,
+        "critic_loss": 0.561
+      },
+      "actor_loss": {
+        "total_reward": 0.798,
+        "actor_loss": 1.0,
+        "critic_loss": 0.354
+      },
+      "critic_loss": {
+        "total_reward": 0.561,
+        "actor_loss": 0.354,
+        "critic_loss": 1.0
+      }
+    },
+    "reward_changepoints_episodes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ],
+    "actor_loss_stability": {
+      "first_half_std": 0.001906578562997625,
+      "second_half_std": 0.00042302057992335844,
+      "ratio_second_over_first": 0.22187302920681864
+    },
+    "critic_loss_stability": {
+      "first_half_std": 64.79838626173007,
+      "second_half_std": 46.87224020367933,
+      "ratio_second_over_first": 0.723355054045976
+    }
+  },
+  {
+    "file": "training/outputs/train_log_secure.csv",
+    "n_episodes": 1000,
+    "total_reward_trend": {
+      "slope": 1.7962062502062501,
+      "r_squared": 0.17720485608888234,
+      "p_value": 3.2107221250141115e-44,
+      "intercept": -2629.9782282282285
+    },
+    "total_reward_tail_dist": {
+      "mean": -231.37,
+      "std": 930.8003361395911,
+      "median": -66.0,
+      "iqr": 1246.5,
+      "skew": -0.5790777662256905,
+      "kurtosis": -0.2175982029459962,
+      "min": -2711.0,
+      "max": 1576.0
+    },
+    "actor_loss_trend": {
+      "slope": 0.20243735922189648,
+      "r_squared": 0.3373228960058856,
+      "p_value": 2.931398794742536e-91,
+      "intercept": -62.23990199646093
+    },
+    "actor_loss_tail_dist": {
+      "mean": 292.7727815671397,
+      "std": 143.5431658815143,
+      "median": 282.06064595400284,
+      "iqr": 216.60579964863746,
+      "skew": 0.12352493221735135,
+      "kurtosis": -0.6307043343637022,
+      "min": 1.3600855023209335,
+      "max": 603.3042389496607
+    },
+    "critic_loss_trend": {
+      "slope": 0.16329795359080027,
+      "r_squared": 0.30838355584477933,
+      "p_value": 5.6174836494046e-82,
+      "intercept": 277.79830673818043
+    },
+    "critic_loss_tail_dist": {
+      "mean": 460.21125946044924,
+      "std": 66.64176149980938,
+      "median": 464.76593017578125,
+      "iqr": 83.96276092529291,
+      "skew": 0.039969139949083014,
+      "kurtosis": -0.200569787979044,
+      "min": 276.3599548339844,
+      "max": 628.8450927734375
+    },
+    "convergence_episode": null,
+    "correlations": {
+      "total_reward": {
+        "total_reward": 1.0,
+        "actor_loss": 0.4,
+        "critic_loss": 0.392
+      },
+      "actor_loss": {
+        "total_reward": 0.4,
+        "actor_loss": 1.0,
+        "critic_loss": 0.389
+      },
+      "critic_loss": {
+        "total_reward": 0.392,
+        "actor_loss": 0.389,
+        "critic_loss": 1.0
+      }
+    },
+    "reward_changepoints_episodes": [
+      2,
+      3,
+      5,
+      7,
+      10,
+      12,
+      13,
+      20,
+      24,
+      27,
+      31,
+      34,
+      35,
+      37,
+      39,
+      40,
+      41,
+      43,
+      46,
+      48
+    ],
+    "actor_loss_stability": {
+      "first_half_std": 0.04684690066478277,
+      "second_half_std": 131.27759988615216,
+      "ratio_second_over_first": 2802.268026285035
+    },
+    "critic_loss_stability": {
+      "first_half_std": 76.7020224688893,
+      "second_half_std": 80.06600611524325,
+      "ratio_second_over_first": 1.0438578218361823
+    }
+  }
+]
