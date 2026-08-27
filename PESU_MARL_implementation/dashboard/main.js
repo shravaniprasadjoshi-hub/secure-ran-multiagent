@@ -13,6 +13,7 @@ let agents = [
 
 let agentMetrics = {};
 let dataLoaded = false;
+let detectedAgents = new Set(); // track which agents we've already shown detection banner for
 
 // Tab switching
 function showTab(name, btn) {
@@ -56,7 +57,7 @@ const sLabels = {
   healthy:'Healthy',
   handover:'Handover active',
   degraded:'Degraded',
-  byzantine:'Byzantine — quarantined'
+  byzantine:'Byzantine - quarantined'
 };
 
 function getStatusColor(status) {
@@ -133,33 +134,37 @@ async function injectFault() {
     await fetch(`${API}/inject?agent_id=${target.id}&attack_type=${atk}`, {method:'POST'});
   } catch(e) {}
 
-  target.status = 'byzantine';
-  target.trust = 0.41;
+  // cell stays green - this is ground-truth injection only, real detection
+  // happens during "Run live sim" via AnomalyDetector/PQC in sim_runner.py
+  target.status = 'healthy';
+  target.trust = 1.0;
   applyHexStyle(target.id);
   renderAllTrust();
   updateOverviewMetrics();
-  addAlert('Byzantine', `Cell ${target.id} compromised — ${atk} attack`);
-  addAlert('Consensus', `Cell ${target.id} excluded from voting`);
-  showBanner(`⚠ Byzantine agent — Cell ${target.id} quarantined (${atk} attack)`);
+
+  addAlert('Byzantine', `Cell ${target.id} injected with ${atk} attack - monitoring...`);
+  showBanner(`Cell ${target.id} injected with ${atk} attack - watching for suspicious behavior...`);
+
   document.getElementById('inject-status').innerHTML =
-    `<span style="color:var(--rust-lt)">⚠ Cell ${target.id} compromised · ${atk} attack · trust → 0.41 · excluded from consensus</span>`;
+    `<span style="color:var(--gold-lt)">⏳ Cell ${target.id} injected with ${atk} attack - detection in progress, run simulation to observe...</span>`;
 }
 
 async function clearFaults() {
   try { await fetch(`${API}/clear`, {method:'POST'}); } catch(e) {}
   agents.forEach(a => { if (a.status !== 'handover') { a.status='healthy'; a.trust=1.0; } applyHexStyle(a.id); });
+  detectedAgents.clear();
   renderAllTrust();
   updateOverviewMetrics();
   hideBanner();
-  addAlert('Recovered','All faults cleared — agents restored');
-  document.getElementById('inject-status').textContent = 'No faults injected — system clean';
+  addAlert('Recovered','All faults cleared - agents restored');
+  document.getElementById('inject-status').textContent = 'No faults injected - system clean';
   document.getElementById('cell-info').innerHTML =
     '<div class="cell-info-title">All faults cleared</div><div class="cell-info-row"><span style="color:var(--sage-lt)">All 7 agents restored ✓</span></div>';
 }
 
 function simHandover() {
   agents.forEach(a => { if (a.status === 'healthy') { a.status='handover'; applyHexStyle(a.id); } });
-  addAlert('System','Handover event — UEs switching between cells');
+  addAlert('System','Handover event - UEs switching between cells');
   setTimeout(() => {
     agents.forEach(a => { if (a.status === 'handover') { a.status='healthy'; applyHexStyle(a.id); } });
     addAlert('System','Handover complete');
@@ -213,7 +218,7 @@ function renderConsensusLog(log) {
     <div class="cons-row">
       <span class="cons-step">Step ${e.step}</span>
       <span class="badge ${e.ok?'badge-ok':'badge-warn'}">${e.ok?'✓':'✗'} ${e.agreement}%</span>
-      <span class="cons-detail">action=${e.final_action ?? '—'} · excluded: ${e.excluded?.length ? e.excluded.join(',') : 'none'}</span>
+      <span class="cons-detail">action=${e.final_action ?? '-'} · excluded: ${e.excluded?.length ? e.excluded.join(',') : 'none'}${e.pqc_excluded?.length ? ' · PQC-rejected: ' + e.pqc_excluded.join(',') : ''}</span>
     </div>`).join('');
 }
 
@@ -224,12 +229,20 @@ async function pollState() {
     const data = await r.json();
     document.getElementById('sys-status').textContent = 'System online';
 
-    // update agents from backend
     if (data.agents) {
       data.agents.forEach((ag, i) => {
         agents[i].trust = ag.trust;
         agents[i].status = ag.status;
         applyHexStyle(i);
+
+        // show detection banner only once real detection has dropped trust meaningfully
+        if (ag.trust < 0.5 && ag.status === 'byzantine' && !detectedAgents.has(i)) {
+          detectedAgents.add(i);
+          showBanner(`⚠ Cell ${i} detected as Byzantine - trust dropped to ${ag.trust.toFixed(2)} - quarantined from consensus`);
+          addAlert('Byzantine', `Cell ${i} caught - trust ${ag.trust.toFixed(2)}, excluded from voting`);
+          document.getElementById('inject-status').innerHTML =
+            `<span style="color:var(--rust-lt)">⚠ Cell ${i} detected · trust → ${ag.trust.toFixed(2)} · excluded from consensus · network stable</span>`;
+        }
       });
       renderAllTrust();
       updateOverviewMetrics();
@@ -251,9 +264,9 @@ async function pollState() {
     if (data.consensus_log) renderConsensusLog(data.consensus_log);
 
     if (data.running) {
-      document.getElementById('sim-status-pill').textContent = `Running — step ${data.step}`;
+      document.getElementById('sim-status-pill').textContent = `Running - step ${data.step}`;
     } else if (data.step > 0) {
-      document.getElementById('sim-status-pill').textContent = `Complete — ${data.step} steps`;
+      document.getElementById('sim-status-pill').textContent = `Complete - ${data.step} steps`;
     }
 
   } catch(e) {
@@ -279,53 +292,47 @@ async function loadDataExploration() {
       yaxis:{color:pt.text, gridcolor:pt.grid}
     };
 
-    // RSRP histogram
     if (d.rsrp) {
       const edges = d.rsrp.edges;
       const x = edges.slice(0,-1).map((v,i)=>((v+edges[i+1])/2).toFixed(1));
       Plotly.newPlot('rsrp-chart', [{type:'bar',x,y:d.rsrp.counts,marker:{color:pt.teal},name:'RSRP'}],
-        {...darkLayout, title:{text:'RSRP Distribution (dBm)',font:{color:pt.title}}, xaxis:{title:'dBm',color:'#A89880'}, yaxis:{color:'#A89880'}});
+        {...darkLayout, title:{text:'RSRP Distribution (dBm)',font:{color:pt.title}}, xaxis:{title:'dBm',color:pt.text}, yaxis:{color:pt.text}});
     }
 
-    // SINR histogram
     if (d.sinr) {
       const edges = d.sinr.edges;
       const x = edges.slice(0,-1).map((v,i)=>((v+edges[i+1])/2).toFixed(1));
       Plotly.newPlot('sinr-chart', [{type:'bar',x,y:d.sinr.counts,marker:{color:pt.blue},name:'SINR'}],
-        {...darkLayout, title:{text:'SINR Distribution (dB)',font:{color:pt.title}}, xaxis:{title:'dB',color:'#A89880'}, yaxis:{color:'#A89880'}});
+        {...darkLayout, title:{text:'SINR Distribution (dB)',font:{color:pt.title}}, xaxis:{title:'dB',color:pt.text}, yaxis:{color:pt.text}});
     }
 
-    // Correlation heatmap
     if (d.correlation) {
       const cols = Object.keys(d.correlation);
       const z = cols.map(r => cols.map(c => d.correlation[r][c] ?? 0));
       Plotly.newPlot('corr-chart',
         [{type:'heatmap',z,x:cols,y:cols,colorscale:'RdBu',zmid:0,text:z.map(r=>r.map(v=>v.toFixed(2))),texttemplate:'%{text}'}],
-        {...darkLayout, title:{text:'Feature Correlation Heatmap',font:{color:'#EDE0C8'}}});
+        {...darkLayout, title:{text:'Feature Correlation Heatmap',font:{color:pt.title}}});
     }
 
-    // CDF
     if (d.cdf) {
       Plotly.newPlot('cdf-chart',
         [{x:d.cdf.x, y:d.cdf.y, mode:'lines', line:{color:pt.teal,width:2}, name:'latency_ms'}],
-        {...darkLayout, title:{text:'CDF — Latency (ms)',font:{color:'#EDE0C8'}}, xaxis:{title:'ms',color:'#A89880'}, yaxis:{title:'CDF',color:'#A89880'}});
+        {...darkLayout, title:{text:'CDF - Latency (ms)',font:{color:pt.title}}, xaxis:{title:'ms',color:pt.text}, yaxis:{title:'CDF',color:pt.text}});
     }
 
-    // SINR by scenario
     if (d.sinr_by_scenario) {
       const scenarios = Object.keys(d.sinr_by_scenario);
       const values = scenarios.map(s => d.sinr_by_scenario[s]);
       Plotly.newPlot('sinr-scenario-chart',
-        [{type:'bar', x:scenarios, y:values, marker:{color:'#7A9E7E'}, name:'Median SINR'}],
-        {...darkLayout, title:{text:'SINR by Scenario (median)',font:{color:'#EDE0C8'}}, xaxis:{color:'#A89880'}, yaxis:{title:'dB',color:'#A89880'}});
+        [{type:'bar', x:scenarios, y:values, marker:{color:pt.sage}, name:'Median SINR'}],
+        {...darkLayout, title:{text:'SINR by Scenario (median)',font:{color:pt.title}}, xaxis:{color:pt.text}, yaxis:{title:'dB',color:pt.text}});
     }
 
-    // Scenario donut
     if (d.scenario_distribution) {
       const labels = Object.keys(d.scenario_distribution);
       const values = labels.map(l => d.scenario_distribution[l]);
       Plotly.newPlot('ov-scenario-chart',
-        [{type:'pie', labels, values, hole:0.4, marker:{ colors:[ pt.teal, pt.blue, pt.rust, pt.orange, pt.gold, pt.text ]}}],
+        [{type:'pie', labels, values, hole:0.4, marker:{colors:[pt.teal,pt.blue,pt.rust,pt.orange,pt.gold,pt.text]}}],
         {...darkLayout, margin:{t:10,b:10,l:10,r:10}, showlegend:true, legend:{font:{color:pt.text},orientation:'v'}});
     }
 
@@ -368,13 +375,12 @@ function renderAgentDetail() {
   document.getElementById('ag-test').textContent  = (ag.test[key]||0).toFixed(3);
 
   const pt = getPlotlyTheme();
-
   const darkLayout = { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:pt.text}, margin:{t:40,b:40,l:50,r:20}, xaxis:{color:pt.text,gridcolor:pt.grid}, yaxis:{color:pt.text,gridcolor:pt.grid} };
   Plotly.newPlot('agent-bar-chart',
     [{type:'bar', x:['Train','Validation','Test'], y:[ag.train[key]||0, ag.val[key]||0, ag.test[key]||0],
       marker:{color:[pt.teal,pt.sage,pt.rust]}, text:[(ag.train[key]||0).toFixed(3),(ag.val[key]||0).toFixed(3),(ag.test[key]||0).toFixed(3)], textposition:'outside'}],
-    {...darkLayout, title:{text:`${name} — ${key.toUpperCase()} across splits`,font:{color:pt.title}},
-      yaxis:{range:[0,1.1],color:'#A89880'}, xaxis:{color:'#A89880'}});
+    {...darkLayout, title:{text:`${name} - ${key.toUpperCase()} across splits`,font:{color:pt.title}},
+      yaxis:{range:[0,1.1],color:pt.text}, xaxis:{color:pt.text}});
 }
 
 function renderAgentSummary() {
@@ -405,8 +411,8 @@ function renderTrainVal() {
     marker:{color:[pt.teal,pt.sage,pt.rust][i]},
   }));
   Plotly.newPlot('trainval-chart', traces,
-    {...darkLayout, barmode:'group', title:{text:'All Agents — Train / Val / Test',font:{color:'#EDE0C8'}},
-      yaxis:{range:[-0.1,1.1],color:'#A89880'}, xaxis:{color:'#A89880'}});
+    {...darkLayout, barmode:'group', title:{text:'All Agents - Train / Val / Test',font:{color:pt.title}},
+      yaxis:{range:[-0.1,1.1],color:pt.text}, xaxis:{color:pt.text}});
 
   const table = document.getElementById('model-details-table');
   table.innerHTML = `<tr><th>Agent</th><th>Model</th><th>Task</th><th>Test score</th></tr>` +
@@ -438,35 +444,35 @@ async function loadMarlTraining() {
          const w=50, s=Math.max(0,i-w), slice=a.slice(s,i+1);
          return slice.reduce((a,b)=>a+b,0)/slice.length;
        }), mode:'lines', line:{color:pt.tealLight,width:2,dash:'dot'}, name:'50-ep moving avg'}],
-      {...darkLayout, title:{text:'MAPPO Reward over 1000 Episodes',font:{color:'#EDE0C8'}},
-        xaxis:{title:'Episode',color:'#A89880'}, yaxis:{title:'Total reward',color:'#A89880'}});
+      {...darkLayout, title:{text:'MAPPO Reward over 1000 Episodes',font:{color:pt.title}},
+        xaxis:{title:'Episode',color:pt.text}, yaxis:{title:'Total reward',color:pt.text}});
 
     Plotly.newPlot('loss-chart',
       [{x:d.episodes, y:d.actor_loss, mode:'lines', line:{color:pt.sage,width:1.5}, name:'Actor loss'},
        {x:d.episodes, y:d.critic_loss, mode:'lines', line:{color:pt.rust,width:1.5}, name:'Critic loss', yaxis:'y2'}],
-      {...darkLayout, title:{text:'Actor & Critic Loss',font:{color:'#EDE0C8'}},
-        xaxis:{title:'Episode',color:'#A89880'},
+      {...darkLayout, title:{text:'Actor & Critic Loss',font:{color:pt.title}},
+        xaxis:{title:'Episode',color:pt.text},
         yaxis:{title:'Actor loss',color:pt.sage},
         yaxis2:{title:'Critic loss',color:pt.rust,overlaying:'y',side:'right'}});
 
   } catch(e) { console.error(e); }
 }
 
-// ── Chatbot ───────────────────────────────────────────────────────────────
+// Chatbot
 const chatResponses = {
   'byzantine': 'A Byzantine agent is a compromised node sending malicious actions to manipulate consensus. Our system detects it using three methods: statistical outlier detection, voting disagreement tracking, and behavioral drift analysis across a sliding window.',
-  'consensus': 'Our consensus engine uses Byzantine-robust voting — it excludes flagged agents before tallying votes. Minimum agreement threshold is 60%. In the shared baseline, consensus accept rate is only 6.6%. Our MARL system reaches ~72%.',
+  'consensus': 'Our consensus engine uses Byzantine-robust voting - it excludes flagged agents before tallying votes. Minimum agreement threshold is 60%. In the shared baseline, consensus accept rate is only 6.6%. Our MARL system reaches ~72%.',
   'trust': 'Trust scores range from 0 to 1. They drop when an agent is flagged by the anomaly detector or violates policy checks, and slowly recover when the agent behaves consistently with the group.',
   'handover': 'A handover is when a UE switches from one cell to another. Our MARL agents learn when to trigger handovers based on RSRP and SINR. The consensus engine ensures no single compromised agent can force a bad handover decision.',
-  'oran': 'O-RAN is the open architecture this system runs in. Our agents live at the Near-RT RIC layer — making millisecond-to-second decisions pushed down to the O-DU and O-CU.',
+  'oran': 'O-RAN is the open architecture this system runs in. Our agents live at the Near-RT RIC layer - making millisecond-to-second decisions pushed down to the O-DU and O-CU.',
   'exp 3': 'Experiment 3 added Byzantine injection and security modules to MARL training. The security layer correctly slows convergence by throttling learning signal during quarantine. Reward went from -2,520 to -259 over 1000 episodes. Given 2000-3000 episodes it will likely close the gap.',
   'rsrp': 'RSRP (Reference Signal Received Power) measures the signal strength from the serving cell. Values range from around -125 to -60 dBm, with the distribution centered around -90 dBm.',
-  'sinr': 'SINR (Signal to Interference and Noise Ratio) measures signal quality. Values above 10 dB are generally good. SINR drops sharply during jamming attacks — the clearest attack signature in the data.',
-  'mappo': 'MAPPO — Multi-Agent Proximal Policy Optimization — uses centralized training with decentralized execution. During training, a shared critic sees all 7 agents\' observations globally. During execution, each agent acts independently using only its local observations. This gives coordinated behavior with fast local inference.',
-  'rrc': 'RRC — Radio Resource Control — manages the connection between UEs and the RAN. It controls handover decisions, access control, resource allocation, and mobility management. In 6G, our MAPPO agents replace traditional rule-based RRC controllers.',
+  'sinr': 'SINR (Signal to Interference and Noise Ratio) measures signal quality. Values above 10 dB are generally good. SINR drops sharply during jamming attacks - the clearest attack signature in the data.',
+  'mappo': 'MAPPO - Multi-Agent Proximal Policy Optimization - uses centralized training with decentralized execution. During training, a shared critic sees all 7 agents observations globally. During execution, each agent acts independently using only its local observations.',
+  'rrc': 'RRC - Radio Resource Control - manages the connection between UEs and the RAN. It controls handover decisions, access control, resource allocation, and mobility management. In 6G, our MAPPO agents replace traditional rule-based RRC controllers.',
   'reward': 'Our reward function: successful handover = +10, healthy defer = +1, radio link failure = -10, ping-pong = -5. These incentives teach agents to trigger handovers when genuinely needed and avoid unnecessary switching.',
-  'pqc': 'PQC — Post-Quantum Cryptography — secures inter-agent communication so quantum computers cannot intercept agent messages during consensus. We plan to implement this using liboqs. This is Experiment 4, currently a stretch goal.',
-  'default': 'Based on the project knowledge base — this relates to our secure multi-agent AI framework for 6G RAN control. Try asking about Byzantine attacks, consensus mechanisms, trust scoring, MAPPO, RSRP, SINR, or O-RAN architecture.',
+  'pqc': 'PQC - Post-Quantum Cryptography - secures inter-agent communication with Kyber768 key exchange and Dilithium3 signatures via liboqs, so a compromised agent can be caught spoofing a message even if its behavior alone looks fine. This is Experiment 4.',
+  'default': 'Based on the project knowledge base - this relates to our secure multi-agent AI framework for 6G RAN control. Try asking about Byzantine attacks, consensus mechanisms, trust scoring, MAPPO, RSRP, SINR, PQC, or O-RAN architecture.',
 };
 
 async function sendChat() {
@@ -479,7 +485,6 @@ async function sendChat() {
     `<div class="chat-msg chat-user">${msg}</div>`);
   inp.value = '';
 
-  // Typing indicator
   const typingId = 'typing-' + Date.now();
   msgs.insertAdjacentHTML('beforeend',
     `<div class="chat-msg chat-bot" id="${typingId}" style="color:var(--text-dim);font-style:italic">Searching knowledge base...</div>`);
@@ -494,12 +499,11 @@ async function sendChat() {
     const data = await r.json();
     document.getElementById(typingId)?.remove();
 
-    // Source citation if RAG returned a real match
     let sourceNote = '';
     if (data.rag_available && data.sources && data.sources.length) {
       const src = data.sources[0];
       sourceNote = `<div style="font-size:11px;color:var(--text-dim);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
-        📄 ${src.title} · <span style="color:var(--teal, #00D4AA)">${src.source}</span>
+        📄 ${src.title} · <span style="color:var(--teal)">${src.source}</span>
       </div>`;
     }
 
@@ -507,7 +511,6 @@ async function sendChat() {
       `<div class="chat-msg chat-bot">${data.answer}${sourceNote}</div>`);
 
   } catch(e) {
-    // API offline — silent fallback to hardcoded responses
     document.getElementById(typingId)?.remove();
     const lower = msg.toLowerCase();
     let reply = chatResponses['default'];
@@ -515,7 +518,7 @@ async function sendChat() {
       if (lower.includes(k)) { reply = v; break; }
     }
     msgs.insertAdjacentHTML('beforeend',
-      `<div class="chat-msg chat-bot">${reply}<div style="font-size:11px;color:var(--text-dim);margin-top:6px">⚠ API offline — using cached responses</div></div>`);
+      `<div class="chat-msg chat-bot">${reply}<div style="font-size:11px;color:var(--text-dim);margin-top:6px">⚠ API offline - using cached responses</div></div>`);
   }
 
   msgs.scrollTop = msgs.scrollHeight;
@@ -531,93 +534,64 @@ function updateThemeIcon() {
   const isLight = document.documentElement.classList.contains('light');
   const icon = document.getElementById('theme-icon');
   const label = document.getElementById('theme-label');
-
   if (icon) icon.textContent = isLight ? '☀' : '☾';
   if (label) label.textContent = isLight ? 'Light' : 'Dark';
 }
 
 function toggleTheme() {
-  const root = document.documentElement;
-  root.classList.toggle('light');
-
-  const theme = root.classList.contains('light') ? 'light' : 'dark';
+  document.documentElement.classList.toggle('light');
+  const theme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
   localStorage.setItem('ran-theme', theme);
-
   updateThemeIcon();
   updatePlotlyTheme();
 }
 
 function initTheme() {
   const saved = localStorage.getItem('ran-theme');
-
-  if (saved === 'light') {
-    document.documentElement.classList.add('light');
-  } else {
-    document.documentElement.classList.remove('light');
-  }
-
+  if (saved === 'light') document.documentElement.classList.add('light');
+  else document.documentElement.classList.remove('light');
   updateThemeIcon();
 }
 
 function getPlotlyTheme() {
   const light = document.documentElement.classList.contains('light');
-
   return {
-    text: light ? '#647777' : '#8FA5A8',
-    title: light ? '#172525' : '#E6F1F2',
-    grid: light ? 'rgba(100,119,119,0.15)' : 'rgba(143,165,168,0.12)',
-    teal: light ? '#159B8C' : '#35C6B0',
+    text:      light ? '#647777' : '#8FA5A8',
+    title:     light ? '#172525' : '#E6F1F2',
+    grid:      light ? 'rgba(100,119,119,0.15)' : 'rgba(143,165,168,0.12)',
+    teal:      light ? '#159B8C' : '#35C6B0',
     tealLight: light ? '#08796D' : '#75DDD0',
-    blue: light ? '#287BA8' : '#55A7D9',
-    gold: light ? '#C98B16' : '#E5B85C',
-    sage: light ? '#3C9A58' : '#63C174',
-    rust: light ? '#D05252' : '#E36A6A',
-    orange: light ? '#C96835' : '#E58A5C'
+    blue:      light ? '#287BA8' : '#55A7D9',
+    gold:      light ? '#C98B16' : '#E5B85C',
+    sage:      light ? '#3C9A58' : '#63C174',
+    rust:      light ? '#D05252' : '#E36A6A',
+    orange:    light ? '#C96835' : '#E58A5C'
   };
 }
 
 function updatePlotlyTheme() {
-  const ids = [
-    'rsrp-chart',
-    'sinr-chart',
-    'corr-chart',
-    'cdf-chart',
-    'sinr-scenario-chart',
-    'ov-scenario-chart',
-    'agent-bar-chart',
-    'trainval-chart',
-    'reward-chart',
-    'loss-chart'
-  ];
-
+  const ids = ['rsrp-chart','sinr-chart','corr-chart','cdf-chart',
+               'sinr-scenario-chart','ov-scenario-chart','agent-bar-chart',
+               'trainval-chart','reward-chart','loss-chart'];
   const theme = getPlotlyTheme();
-
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el || !el.data) return;
-
     Plotly.relayout(id, {
-      'font.color': theme.text,
-      'title.font.color': theme.title,
-      'xaxis.color': theme.text,
-      'yaxis.color': theme.text,
-      'xaxis.gridcolor': theme.grid,
-      'yaxis.gridcolor': theme.grid,
+      'font.color': theme.text, 'title.font.color': theme.title,
+      'xaxis.color': theme.text, 'yaxis.color': theme.text,
+      'xaxis.gridcolor': theme.grid, 'yaxis.gridcolor': theme.grid,
       'legend.font.color': theme.text,
-      'paper_bgcolor': 'rgba(0,0,0,0)',
-      'plot_bgcolor': 'rgba(0,0,0,0)'
+      'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)'
     });
   });
 }
 
 // Init
 initTheme();
-
 agents.forEach((_,i) => applyHexStyle(i));
 renderAllTrust();
 updateOverviewMetrics();
 loadDataExploration();
-
-// Poll state every 2s
 pollState();
 setInterval(pollState, 2000);
