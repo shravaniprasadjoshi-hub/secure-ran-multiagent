@@ -32,7 +32,11 @@ sim_state: dict = {
     "consensus_log": [],
     "alerts": [],
     "running": False,
-    # Exp 4 - PQC channel stats, updated live during run_eval_episode().
+    # ground-truth compromised agents (set by POST /inject), separate from the DISPLAYED status/trust below
+    # status only flips to 'byzantine' once run_eval_episode's real detection (AnomalyDetector/PQC) actually catches it
+    # without this separation, /inject instantly painting the cell red made "detection" meaningless 
+    "injected_faults": {},  # {agent_id: attack_type}
+    # Exp 4 - PQC channel stats, updated live during run_eval_episode()
     # kem_alg/sig_alg stay None until a run actually starts a channel.
     "pqc": {
         "kem_alg": None,
@@ -95,11 +99,11 @@ def run_eval_episode(use_secure: bool = True):
                 "time": "Just now"
             })
 
-        # preserve any byzantine agents injected from the frontend before this run started
+        # preserve any faults injected from the frontend before this run started - ground truth (injected_faults)
+        # NOT the displayed status, so detection in the loop below is real rather than an instant self-confirming readback
         injector = ByzantineFaultInjector(total_agents=n_agents)
-        for ag in sim_state["agents"]:
-            if ag["status"] == "byzantine":
-                injector.inject(agent_id=ag["id"], attack_type="random")
+        for agent_id, attack_type in sim_state["injected_faults"].items():
+            injector.inject(agent_id=agent_id, attack_type=attack_type)
 
         detector = AnomalyDetector(n_agents=n_agents, window_size=20, threshold=3.0)
         checker = PolicyChecker(n_agents=n_agents, action_space_size=3)
