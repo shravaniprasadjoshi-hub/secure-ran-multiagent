@@ -52,3 +52,5 @@ security:
   quarantine_threshold: 0.3 # below this, agent's action forced to defer
 
   min_agreement: 0.6 # ConsensusEngine - diagnostic metric only
+
+  enable_pqc: true
