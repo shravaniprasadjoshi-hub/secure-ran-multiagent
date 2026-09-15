@@ -222,6 +222,19 @@ function renderConsensusLog(log) {
     </div>`).join('');
 }
 
+// PQC (Exp 4) panel — pqc block already lives in sim_state, no new endpoint needed
+function renderPqc(pqc) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('pqc-kem-alg', pqc.kem_alg || '—');
+  set('pqc-sig-alg', pqc.sig_alg || '—');
+  set('pqc-kem-handshakes', pqc.kem_handshakes ?? 0);
+  set('pqc-rejections', pqc.rejections ?? 0);
+  set('pqc-sig-issued', pqc.signatures_issued ?? 0);
+  set('pqc-verifications', pqc.verifications ?? 0);
+  set('pqc-avg-sign', `${(pqc.avg_sign_ms ?? 0).toFixed(2)} ms`);
+  set('pqc-avg-verify', `${(pqc.avg_verify_ms ?? 0).toFixed(2)} ms`);
+}
+
 // Poll /state every 2s
 async function pollState() {
   try {
@@ -262,6 +275,8 @@ async function pollState() {
     }
 
     if (data.consensus_log) renderConsensusLog(data.consensus_log);
+
+    if (data.pqc) renderPqc(data.pqc);
 
     if (data.running) {
       document.getElementById('sim-status-pill').textContent = `Running - step ${data.step}`;

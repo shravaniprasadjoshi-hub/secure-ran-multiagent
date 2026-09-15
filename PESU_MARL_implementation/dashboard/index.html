@@ -328,10 +328,50 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════
-     TAB 7 - CHATBOT
+     TAB 7 - PQC (Exp 4)
+════════════════════════════════════════════════ -->
+<div class="tab-page" id="tab-pqc">
+  <div class="eyebrow">08 · Transit security</div>
+  <div class="page-title">Post-Quantum Secure Channel</div>
+  <div class="page-sub">Every agent-to-coordinator message is quantum-safe encrypted and signed - updates live during "Run live sim"</div>
+
+  <div class="grid4">
+    <div class="card"><div class="card-label">KEM algorithm</div><div class="card-val" id="pqc-kem-alg" style="font-size:18px">-</div><div class="card-sub">key exchange</div></div>
+    <div class="card"><div class="card-label">Signature algorithm</div><div class="card-val" id="pqc-sig-alg" style="font-size:18px">-</div><div class="card-sub">message signing</div></div>
+    <div class="card"><div class="card-label">KEM handshakes</div><div class="card-val" id="pqc-kem-handshakes">0</div><div class="card-sub">this run, 1 per agent</div></div>
+    <div class="card"><div class="card-label">Rejections</div><div class="card-val" id="pqc-rejections" style="color:var(--rust-lt)">0</div><div class="card-sub">tampered/forged, caught</div></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Signing</div>
+      <div class="agent-row"><span class="agent-id" style="width:auto;flex:1">Signatures issued</span><span class="tval" id="pqc-sig-issued" style="width:auto">0</span></div>
+      <div class="agent-row"><span class="agent-id" style="width:auto;flex:1">Avg sign time</span><span class="tval" id="pqc-avg-sign" style="width:auto">0 ms</span></div>
+    </div>
+    <div class="card">
+      <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:14px;font-family:Georgia,serif">Verification</div>
+      <div class="agent-row"><span class="agent-id" style="width:auto;flex:1">Verifications run</span><span class="tval" id="pqc-verifications" style="width:auto">0</span></div>
+      <div class="agent-row"><span class="agent-id" style="width:auto;flex:1">Avg verify time</span><span class="tval" id="pqc-avg-verify" style="width:auto">0 ms</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:8px;font-family:Georgia,serif">What this adds</div>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.7">
+      Exp 3's trust/anomaly/consensus stack only judges agent <i>behavior</i> - it assumes a message really came from
+      that agent, unmodified. Exp 4 closes that gap: a one-time quantum-safe key exchange per agent per episode sets
+      up an encrypted channel, and every action is signed with that agent's identity key before it reaches the
+      coordinator. A tampered or forged message fails verification and is dropped before it can influence any
+      decision - caught here even if the agent's behavior alone looked perfectly normal.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     TAB 8 - CHATBOT
 ════════════════════════════════════════════════ -->
 <div class="tab-page" id="tab-chatbot">
-  <div class="eyebrow">08 · Knowledge assistant</div>
+  <div class="eyebrow">09 · Knowledge assistant</div>
   <div class="page-title">RAN Chatbot</div>
   <div class="page-sub">Ask anything about the network, agents, or security - powered by RAG over Nokia's knowledge corpus</div>
 
