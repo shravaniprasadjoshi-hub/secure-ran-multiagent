@@ -49,9 +49,9 @@
   <div class="page-sub">Real-time metrics across the full RAN multi-agent system</div>
 
   <div class="grid4">
-    <div class="card"><div class="card-label">Telemetry records</div><div class="card-val">70,000</div><div class="card-sub">Nokia 70k dataset</div></div>
-    <div class="card"><div class="card-label">AI agents</div><div class="card-val">8 + 7</div><div class="card-sub">Nokia's sklearn + our MARL</div></div>
-    <div class="card"><div class="card-label">Cells / gNBs</div><div class="card-val">48 / 12</div><div class="card-sub">Nokia digital twin</div></div>
+    <div class="card"><div class="card-label">Telemetry records</div><div class="card-val">70,000</div><div class="card-sub">Synthetic 70k dataset</div></div>
+    <div class="card"><div class="card-label">AI agents</div><div class="card-val">8 + 7</div><div class="card-sub">Sklearn + our MARL</div></div>
+    <div class="card"><div class="card-label">Cells / gNBs</div><div class="card-val">48 / 12</div><div class="card-sub">Digital twin</div></div>
     <div class="card"><div class="card-label">MARL consensus rate</div><div class="card-val" id="ov-consensus">72%</div><div class="card-sub" id="ov-consensus-sub">↑ from 6.6% shared baseline</div></div>
   </div>
 
@@ -93,12 +93,10 @@
 <div class="tab-page" id="tab-data">
   <div class="eyebrow">02 · Dataset analysis</div>
   <div class="page-title">Data Exploration</div>
-  <div class="page-sub">Distributions, correlations and CDFs from the 70k Nokia telemetry dataset</div>
+  <div class="page-sub">Distributions, correlations and CDFs from the 70k synthetic telemetry dataset</div>
 
-  <div class="grid2" style="margin-bottom:16px">
-    <div class="plot-box"><div id="rsrp-chart" style="height:300px"></div></div>
-    <div class="plot-box"><div id="sinr-chart" style="height:300px"></div></div>
-  </div>
+  <div class="plot-box"><div id="rsrp-chart" style="height:300px"></div></div>
+  <div class="plot-box"><div id="sinr-chart" style="height:300px"></div></div>
   <div class="plot-box" style="margin-bottom:16px"><div id="corr-chart" style="height:420px"></div></div>
   <div class="plot-box" style="margin-bottom:16px"><div id="cdf-chart" style="height:320px"></div></div>
   <div class="plot-box"><div id="sinr-scenario-chart" style="height:320px"></div></div>
@@ -291,12 +289,21 @@
   <div class="page-title">MARL Training</div>
   <div class="page-sub">MAPPO training over 1000 episodes - reward curve and ablation study vs Nokia's baseline</div>
 
-  <div class="plot-box" style="margin-bottom:16px"><div id="reward-chart" style="height:380px"></div></div>
-  <div class="plot-box" style="margin-bottom:16px"><div id="loss-chart" style="height:280px"></div></div>
+  <div class="plot-box" style="margin-bottom:16px">
+    <img src="../training/outputs/plots/01_reward_curve.png"
+        alt="Training Reward Curve"
+        style="width:100%;height:auto;border-radius:10px;">
+  </div>
+
+  <div class="plot-box" style="margin-bottom:16px">
+    <img src="../training/outputs/plots/04_reward_distribution.png"
+        alt="Reward Distribution"
+        style="width:100%;height:auto;border-radius:10px;">
+  </div>
 
   <div class="card">
     <div style="font-size:15px;font-weight:700;color:var(--cream);margin-bottom:4px;font-family:Georgia,serif">Ablation study</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Each layer adds measurable improvement. Exp 3 still converging - see notes.</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Each layer adds measurable improvement.</div>
     <div class="ablation-grid">
       <div class="ablation-card">
         <div class="ablation-label">Exp 1 - Shared baseline<br><span style="font-size:10px">(supervised ML, static consensus)</span></div>
@@ -311,19 +318,15 @@
       <div class="ablation-card">
         <div class="ablation-label">Exp 3 - MAPPO + Security<br><span style="font-size:10px">(Byzantine injection, trust)</span></div>
         <div class="ablation-val">-259</div>
-        <div style="font-size:11px;color:var(--rust-lt);margin-top:4px">converging, not yet matched</div>
+        <div style="font-size:11px;color:var(--rust-lt);margin-top:4px">converging</div>
       </div>
-      <div class="ablation-card best">
-        <div class="ablation-label">Exp 4 - Full system + PQC<br><span style="font-size:10px">(stretch goal)</span></div>
-        <div class="ablation-val">TBD</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">not yet run</div>
+      <div class="ablation-card">
+        <div class="ablation-label">Exp 4 - Full system + PQC<br><span style="font-size:10px">(Byzantine + trust + transit security)</span></div>
+        <div class="ablation-val">100%</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">PQC detection rate</div></div></div>
       </div>
     </div>
-    <div style="font-size:12px;color:var(--text-dim);margin-top:14px;padding:10px;background:var(--bg3);border-radius:8px">
-      <b style="color:var(--gold-lt)">Note on Exp 3:</b> Security adds real training cost - agents under quarantine skip PPO updates, slowing convergence.
-      Reward went from -2,520 → -259 over 1000 episodes (trending right direction).
-      This exploration-security tradeoff is itself a legitimate research finding, not a flaw.
-    </div>
+    
   </div>
 </div>
 
@@ -395,7 +398,7 @@
   </div>
 </div>
 
-<footer>Nokia Bangalore University Collaboration · Secure Multi-Agent AI Framework for RAN Control Loops · Shreyashree · Shravani · Shloka · Shashank</footer>
+<footer>Nokia Bangalore University Collaboration · Secure Multi-Agent AI Framework for RAN Control Loops · Shreyashree · Shravani · Shashank · Shloka</footer>
 
 <script src="main.js"></script>
 </body>

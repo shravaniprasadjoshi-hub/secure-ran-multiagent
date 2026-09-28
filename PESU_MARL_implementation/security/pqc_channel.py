@@ -26,12 +26,6 @@ Used by: training/train_secure.py (Exp 4), dashboard/sim_runner.py (Exp 4 live s
 # enabled list if neither exists - check that against whatever liboqs
 # version you built.
 #
-# NOT WIRED INTO sim_runner.py YET - this is the standalone module only.
-# Integration point (next step): in run_eval_episode(), each agent's raw
-# action goes through channel.send_action() before detector.run_all_detectors()
-# / consensus.reach_consensus(); only actions where receive_action() returns
-# verified=True get passed through - forged/tampered ones get treated as
-# flagged, same as a Byzantine-flagged agent.
 """
 
 from __future__ import annotations

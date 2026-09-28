@@ -453,24 +453,39 @@ async function loadMarlTraining() {
     const pt = getPlotlyTheme();
     const darkLayout = { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:pt.text}, margin:{t:50,b:50,l:60,r:20}, xaxis:{color:pt.text,gridcolor:pt.grid}, yaxis:{color:pt.text,gridcolor:pt.grid} };
 
+    const rewards = d.rewards;
+    const window = 50;
+    const rollingMean = rewards.map((_,i) => {
+      const start = Math.max(0,i-window+1);
+      const slice = rewards.slice(start,i+1);
+      return slice.reduce((a,b)=>a+b,0)/slice.length;
+    });
+    const ema = [];
+    rewards.forEach((v,i) => ema.push(i === 0 ? v : 0.05*v + 0.95*ema[i-1]));
+
     Plotly.newPlot('reward-chart',
-      [{x:d.episodes, y:d.rewards, mode:'lines', line:{color:pt.teal,width:2}, name:'Total reward'},
-       {x:d.episodes, y:d.rewards.map((_,i,a) => {
-         const w=50, s=Math.max(0,i-w), slice=a.slice(s,i+1);
-         return slice.reduce((a,b)=>a+b,0)/slice.length;
-       }), mode:'lines', line:{color:pt.tealLight,width:2,dash:'dot'}, name:'50-ep moving avg'}],
-      {...darkLayout, title:{text:'MAPPO Reward over 1000 Episodes',font:{color:pt.title}},
-        xaxis:{title:'Episode',color:pt.text}, yaxis:{title:'Total reward',color:pt.text}});
+      [{x:d.episodes,y:rewards,mode:'lines',line:{color:pt.teal,width:1},opacity:0.12,name:'Raw reward'},
+       {x:d.episodes,y:rollingMean,mode:'lines',line:{color:pt.teal,width:2},name:'Rolling mean (w=50)'},
+       {x:d.episodes,y:ema,mode:'lines',line:{color:pt.tealLight,width:1.5,dash:'dash'},name:'EMA'}],
+      {...darkLayout,title:{text:'Training Reward — Raw / Rolling Mean / EMA',font:{color:pt.title}},
+        xaxis:{title:'Episode',color:pt.text,gridcolor:pt.grid},yaxis:{title:'Total Reward',color:pt.text,gridcolor:pt.grid},
+        legend:{font:{color:pt.text}}});
 
-    Plotly.newPlot('loss-chart',
-      [{x:d.episodes, y:d.actor_loss, mode:'lines', line:{color:pt.sage,width:1.5}, name:'Actor loss'},
-       {x:d.episodes, y:d.critic_loss, mode:'lines', line:{color:pt.rust,width:1.5}, name:'Critic loss', yaxis:'y2'}],
-      {...darkLayout, title:{text:'Actor & Critic Loss',font:{color:pt.title}},
-        xaxis:{title:'Episode',color:pt.text},
-        yaxis:{title:'Actor loss',color:pt.sage},
-        yaxis2:{title:'Critic loss',color:pt.rust,overlaying:'y',side:'right'}});
+    const lastRewards = rewards.slice(-100);
 
-  } catch(e) { console.error(e); }
+    Plotly.newPlot('reward-hist-chart',
+      [{x:lastRewards,type:'histogram',nbinsx:30,opacity:0.65,marker:{color:pt.teal},name:'Reward'}],
+      {...darkLayout,title:{text:'Reward Distribution (last 100 episodes)',font:{color:pt.title}},
+        xaxis:{title:'Total Reward',color:pt.text,gridcolor:pt.grid},yaxis:{title:'Count',color:pt.text,gridcolor:pt.grid},
+        showlegend:false});
+
+    Plotly.newPlot('reward-box-chart',
+      [{y:lastRewards,type:'box',name:'Training reward',marker:{color:pt.teal},line:{color:pt.teal},boxmean:true,boxpoints:false}],
+      {...darkLayout,title:{text:'Reward Spread (last 100 episodes)',font:{color:pt.title}},
+        xaxis:{color:pt.text,gridcolor:pt.grid},yaxis:{title:'Total Reward',color:pt.text,gridcolor:pt.grid},
+        showlegend:false});
+
+  } catch(e) { console.error('MARL training load error:',e); }
 }
 
 // Chatbot
@@ -587,7 +602,7 @@ function getPlotlyTheme() {
 function updatePlotlyTheme() {
   const ids = ['rsrp-chart','sinr-chart','corr-chart','cdf-chart',
                'sinr-scenario-chart','ov-scenario-chart','agent-bar-chart',
-               'trainval-chart','reward-chart','loss-chart'];
+               'trainval-chart','reward-chart','reward-hist-chart','reward-box-chart'];
   const theme = getPlotlyTheme();
   ids.forEach(id => {
     const el = document.getElementById(id);
