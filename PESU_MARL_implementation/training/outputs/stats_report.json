@@ -202,5 +202,107 @@
       "second_half_std": 80.06600611524325,
       "ratio_second_over_first": 1.0438578218361823
     }
+  },
+  {
+    "file": "training/outputs/train_log_shadowfix.csv",
+    "n_episodes": 1000,
+    "total_reward_trend": {
+      "slope": 0.06326961003710892,
+      "r_squared": 0.24554307321079347,
+      "p_value": 4.4204702771031523e-63,
+      "intercept": 1007.9140640547446
+    },
+    "total_reward_tail_dist": {
+      "mean": 1074.906176444609,
+      "std": 23.18837398162876,
+      "median": 1076.8675463276747,
+      "iqr": 31.311671035696918,
+      "skew": -0.2942187969594713,
+      "kurtosis": 0.036130488920871784,
+      "min": 1002.0343396627084,
+      "max": 1124.7450448130792
+    },
+    "actor_loss_trend": {
+      "slope": 3.1263260539154806e-07,
+      "r_squared": 0.029780802299958394,
+      "p_value": 3.982996173386449e-08,
+      "intercept": -0.053036656037013706
+    },
+    "actor_loss_tail_dist": {
+      "mean": -0.05251916860097216,
+      "std": 0.00045474349877714233,
+      "median": -0.0525774965062737,
+      "iqr": 0.0005730973955775723,
+      "skew": 0.05834531071746864,
+      "kurtosis": 0.31850715563055587,
+      "min": -0.0539590189499514,
+      "max": -0.0514089119221483
+    },
+    "critic_loss_trend": {
+      "slope": -0.02921487671427304,
+      "r_squared": 0.6661256653936943,
+      "p_value": 5.730667726029337e-240,
+      "intercept": 35.168132050090364
+    },
+    "critic_loss_tail_dist": {
+      "mean": 8.858675718307495,
+      "std": 3.2434894878303586,
+      "median": 7.762542009353638,
+      "iqr": 3.508473038673401,
+      "skew": 1.9143613741978496,
+      "kurtosis": 5.344561463191981,
+      "min": 4.707160949707031,
+      "max": 24.494874954223636
+    },
+    "convergence_episode": 51,
+    "correlations": {
+      "total_reward": {
+        "total_reward": 1.0,
+        "actor_loss": 0.142,
+        "critic_loss": -0.555
+      },
+      "actor_loss": {
+        "total_reward": 0.142,
+        "actor_loss": 1.0,
+        "critic_loss": -0.083
+      },
+      "critic_loss": {
+        "total_reward": -0.555,
+        "actor_loss": -0.083,
+        "critic_loss": 1.0
+      }
+    },
+    "reward_changepoints_episodes": [
+      6,
+      9,
+      11,
+      12,
+      14,
+      15,
+      16,
+      19,
+      22,
+      25,
+      27,
+      29,
+      31,
+      33,
+      41,
+      47,
+      50,
+      51,
+      53,
+      54
+    ],
+    "actor_loss_stability": {
+      "first_half_std": 0.0005421211824568275,
+      "second_half_std": 0.0005016288460066345,
+      "ratio_second_over_first": 0.9252905242110502
+    },
+    "critic_loss_stability": {
+      "first_half_std": 9.61490651157812,
+      "second_half_std": 5.325758223280594,
+      "ratio_second_over_first": 0.5539063964198023
+    }
   }
 ]
