@@ -25,7 +25,7 @@ def plot_reward_curve(dfs_labels, window, outdir):
     for (df, label), color in zip(dfs_labels, COLORS):
         roll_mean = df["total_reward"].rolling(window).mean()
         ema = df["total_reward"].ewm(alpha=0.05, adjust=False).mean()
-        ax.plot(df["episode"], df["total_reward"], color=color, alpha=0.15, linewidth=0.6)
+        ax.plot(df["episode"], df["total_reward"], color=color, alpha=0.05, linewidth=0.5)
         ax.plot(df["episode"], roll_mean, color=color, linewidth=2, label=f"{label} (rolling mean, w={window})")
         ax.plot(df["episode"], ema, color=color, linewidth=1, linestyle="--", label=f"{label} (EMA)")
     ax.set_xlabel("Episode")
@@ -58,7 +58,7 @@ def plot_losses(dfs_labels, window, outdir):
             if col not in df.columns:
                 continue
             smoothed = df[col].rolling(window).mean()
-            ax.plot(df["episode"], df[col], color=color, alpha=0.15, linewidth=0.6)
+            ax.plot(df["episode"], df[col], color=color, alpha=0.05, linewidth=0.5)
             ax.plot(df["episode"], smoothed, color=color, linewidth=1.8, label=label)
     axes[0].set_title("Actor Loss (raw + smoothed)")
     axes[1].set_title("Critic Loss (raw + smoothed)")
