@@ -7,3 +7,8 @@ results/logs/
 training/outputs/checkpoints/
 training/outputs/checkpoints_secure/
 liboqs/
+# regenerable
+security/benchmark_pqc.py
+training/results_table.py
+training/outputs/pqc_benchmark.json
+training/outputs/results_table.csv
